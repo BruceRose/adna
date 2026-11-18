@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DimensionBars } from "@/components/DimensionBars";
 import { formatDate, industryLabel } from "@/lib/format";
-import { POLE_INFO, SCALE, STATEMENTS } from "@/lib/questionnaire";
+import { POLE_INFO, STATEMENTS } from "@/lib/questionnaire";
 import { getResponse } from "@/lib/responses";
 import { dimensionsFromScores, pointsFor } from "@/lib/scoring";
 import { oppositePole } from "@/lib/questionnaire";
@@ -75,7 +75,7 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
                     <td>{i + 1}</td>
                     <td>{s.text}</td>
                     <td className="nowrap">
-                      {a ?? "–"} {a && <span className="muted">{SCALE[a - 1].label}</span>}
+                      {a ? <>{a} <span className="muted">/ 6</span></> : "–"}
                     </td>
                     <td className="nowrap">
                       {p &&

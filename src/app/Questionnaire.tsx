@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { INDUSTRIES, OTHER_INDUSTRY, SCALE, STATEMENTS } from "@/lib/questionnaire";
+import { INDUSTRIES, OTHER_INDUSTRY, SCALE_ENDS, SCALE_VALUES, STATEMENTS } from "@/lib/questionnaire";
 import type { FieldErrors } from "@/lib/validation";
 import { submitResponse } from "./actions";
 
@@ -122,11 +122,11 @@ export function Questionnaire() {
       <section className="card">
         <h1>Discover your Audience DNA</h1>
         <p className="lede">
-          {total} short statements, about 3 minutes. Tell us how much you agree with each one and we&apos;ll show
-          you your profile at the end.
+          {total} quick statements, about 3 minutes. There are no right or wrong answers, so just go with your gut.
+          We&apos;ll reveal your profile at the end.
         </p>
         <form onSubmit={startQuestions} noValidate className="form">
-          <Field label="Full name" error={errors.name} htmlFor="name">
+          <Field label="Your name" error={errors.name} htmlFor="name">
             <input
               id="name"
               autoComplete="name"
@@ -135,7 +135,7 @@ export function Questionnaire() {
               aria-invalid={!!errors.name}
             />
           </Field>
-          <Field label="Email address" error={errors.email} htmlFor="email">
+          <Field label="Your email" error={errors.email} htmlFor="email">
             <input
               id="email"
               type="email"
@@ -145,7 +145,7 @@ export function Questionnaire() {
               aria-invalid={!!errors.email}
             />
           </Field>
-          <Field label="Industry" error={errors.industry} htmlFor="industry">
+          <Field label="Your industry" error={errors.industry} htmlFor="industry">
             <select
               id="industry"
               value={details.industry}
@@ -186,7 +186,7 @@ export function Questionnaire() {
           </div>
           {formError && <p className="error banner">{formError}</p>}
           <button type="submit" className="primary">
-            {answeredCount > 0 ? "Continue" : "Start"}
+            {answeredCount > 0 ? "Carry on →" : "Let's go →"}
           </button>
         </form>
       </section>
@@ -202,26 +202,37 @@ export function Questionnaire() {
       <div className="progress" aria-hidden>
         <div className="progress-fill" style={{ width: `${(answeredCount / total) * 100}%` }} />
       </div>
-      <p className="eyebrow">
-        Statement {step + 1} of {total}
-      </p>
-      <h2 className="statement" id="statement">
-        {statement.text}
-      </h2>
-      <div className="scale" role="radiogroup" aria-labelledby="statement">
-        {SCALE.map((s) => (
-          <button
-            key={s.value}
-            type="button"
-            role="radio"
-            aria-checked={current === s.value}
-            className={`scale-option${current === s.value ? " selected" : ""}`}
-            onClick={() => choose(step, s.value)}
-          >
-            <span className="scale-num">{s.value}</span>
-            <span className="scale-label">{s.label}</span>
-          </button>
-        ))}
+      <div key={step} className="slide-in">
+        <p className="eyebrow">
+          Statement {step + 1} of {total}
+          {cheer(step, total) && <span className="cheer">{cheer(step, total)}</span>}
+        </p>
+        <h2 className="statement" id="statement">
+          {statement.text}
+        </h2>
+        <div className="scale-wrap">
+          <span className="scale-end disagree" aria-hidden>
+            {SCALE_ENDS.min}
+          </span>
+          <div className="scale" role="radiogroup" aria-labelledby="statement">
+            {SCALE_VALUES.map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={current === v}
+                aria-label={
+                  v === 1 ? `1 of 6, ${SCALE_ENDS.min}` : v === 6 ? `6 of 6, ${SCALE_ENDS.max}` : `${v} of 6`
+                }
+                className={`dot dot-${v}${current === v ? " selected" : ""}`}
+                onClick={() => choose(step, v)}
+              />
+            ))}
+          </div>
+          <span className="scale-end agree" aria-hidden>
+            {SCALE_ENDS.max}
+          </span>
+        </div>
       </div>
       <div className="nav">
         <button type="button" className="ghost" onClick={goBack}>
@@ -229,7 +240,7 @@ export function Questionnaire() {
         </button>
         {isLast ? (
           <button type="button" className="primary" disabled={!allAnswered || pending} onClick={submit}>
-            {pending ? "Working out your profile…" : "See my profile"}
+            {pending ? "Working out your profile…" : "Reveal my profile →"}
           </button>
         ) : (
           current && (
@@ -246,9 +257,17 @@ export function Questionnaire() {
         </p>
       )}
       {formError && <p className="error banner">{formError}</p>}
-      <p className="hint">Tip: press 1–6 on your keyboard to answer.</p>
+      <p className="hint">Tip: you can press 1–6 on your keyboard to answer.</p>
     </section>
   );
+}
+
+/** A little encouragement at a few points along the way. */
+function cheer(step: number, total: number): string | null {
+  if (step === 0) return "Go with your first instinct";
+  if (step === Math.floor(total / 2)) return "Halfway there!";
+  if (step === total - 1) return "Last one!";
+  return null;
 }
 
 function Field(props: { label: string; htmlFor: string; error?: string; children: React.ReactNode }) {

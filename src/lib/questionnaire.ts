@@ -87,15 +87,13 @@ export const STATEMENTS: Statement[] = [
   { id: "q16", text: "I like interpreting the end of books and films", agreePole: "intuition" },
 ];
 
-/** 6-point agreement scale: 1 = strongly disagree … 6 = strongly agree. */
-export const SCALE = [
-  { value: 1, label: "Strongly disagree" },
-  { value: 2, label: "Disagree" },
-  { value: 3, label: "Slightly disagree" },
-  { value: 4, label: "Slightly agree" },
-  { value: 5, label: "Agree" },
-  { value: 6, label: "Strongly agree" },
-] as const;
+/**
+ * 6-point agreement scale. Only the two ends are labelled for respondents,
+ * so the in-between options are left to their own interpretation.
+ * Scoring: 1 = most disagree … 6 = most agree.
+ */
+export const SCALE_VALUES = [1, 2, 3, 4, 5, 6] as const;
+export const SCALE_ENDS = { min: "Disagree", max: "Agree" } as const;
 
 export interface Profile {
   code: string;

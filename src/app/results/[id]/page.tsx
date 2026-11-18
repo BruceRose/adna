@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { DimensionBars } from "@/components/DimensionBars";
 import { PROFILES } from "@/lib/questionnaire";
 import { getResponse } from "@/lib/responses";
@@ -15,11 +14,15 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
 
   const profile = PROFILES.find((p) => p.code === row.code);
   const dimensions = dimensionsFromScores(row.scores);
+  const name = profile?.name ?? row.profile;
 
   return (
     <section className="card result">
-      <p className="eyebrow">Your Audience DNA profile</p>
-      <h1 className="profile-name">{profile?.name ?? row.profile}</h1>
+      <p className="eyebrow">Your Audience DNA</p>
+      <h1 className="profile-name">
+        <span className="youre">You&apos;re {/^[AEIOU]/.test(name) ? "an" : "a"}</span>
+        {name}
+      </h1>
       <p className="code" aria-label={`Code ${row.code}`}>
         {row.code.split("").map((l, i) => (
           <span key={i}>{l}</span>
@@ -27,14 +30,15 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
       </p>
       {profile?.description && <p className="profile-desc">{profile.description}</p>}
 
-      <h2 className="section-title">How you scored</h2>
+      <h2 className="section-title">How your answers balanced out</h2>
       <p className="muted">
-        Each pair is scored from your answers. The side with more points gives you that letter of your code.
+        Your profile comes from four pairs of traits. Whichever side of each pair you leaned towards gives you
+        that letter.
       </p>
       <DimensionBars dimensions={dimensions} />
 
       <p className="muted small">
-        Thanks for taking part. You can come back to this page using its link. <Link href="/">Start again</Link>
+        Thanks for taking part! Bookmark this page to come back to your results any time.
       </p>
     </section>
   );

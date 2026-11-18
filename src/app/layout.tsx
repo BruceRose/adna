@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import "@fontsource-variable/nunito";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +16,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="site-header">
           <Link href="/" className="wordmark">
-            Audience <span>DNA</span>
+            <span className="logo" aria-hidden>
+              <i />
+              <i />
+            </span>
+            Audience <span className="dna">DNA</span>
           </Link>
         </header>
         <main className="container">{children}</main>
