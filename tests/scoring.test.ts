@@ -158,6 +158,36 @@ test("audience report summarises the spreadsheet audience", () => {
   assert.ok(PROFILES.some((p) => p.code === report.typicalCode));
 });
 
+test("audience report: fingerprint, formats, playbook and watch-outs", () => {
+  const report = buildAudienceReport(rows85())!;
+  assert.equal(report.smallSample, false);
+  assert.equal(Object.values(report.profileCounts).reduce((a, b) => a + b, 0), 85);
+  for (const d of report.dimensions) assert.equal(d.positions.length, 85);
+  for (const role of ["planners", "content", "presenters"] as const) assert.equal(report.playbook[role].length, 4);
+  // Formats are ranked by fit.
+  for (let i = 1; i < report.formats.length; i++) assert.ok(report.formats[i - 1].fit >= report.formats[i].fit);
+  assert.match(report.headline, /^An? .+ audience/);
+  assert.ok(report.watchOuts.every((w) => w.share >= 20 && w.share < 50));
+  assert.ok(report.avoid.every((a) => a.share >= 50));
+});
+
+test("audience report: an evenly split audience reads as mixed", () => {
+  const one = scoreAnswers(Object.fromEntries(STATEMENTS.map((s) => [s.id, 6])));
+  const other = scoreAnswers(Object.fromEntries(STATEMENTS.map((s) => [s.id, 1])));
+  const report = buildAudienceReport([
+    { scores: one.scores, version: "2" },
+    { scores: other.scores, version: "2" },
+  ])!;
+  assert.equal(report.smallSample, true);
+  assert.ok(report.dimensions.every((d) => d.lean === "mixed" && !d.majority));
+  assert.match(report.headline, /^A genuinely mixed audience/);
+  assert.equal(report.watchOuts.length, 0);
+});
+
+test("audience report: empty selection returns null", () => {
+  assert.equal(buildAudienceReport([]), null);
+});
+
 test("event tags are normalised to safe slugs", () => {
   assert.equal(eventSchema.parse("Summit 2027!"), "summit-2027");
   assert.equal(eventSchema.parse("  "), undefined);

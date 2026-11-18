@@ -9,10 +9,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   await requireAdmin();
   return (
     <div className="admin">
-      <nav className="admin-nav">
+      <nav className="admin-nav no-print">
         <div className="admin-links">
           <Link href="/admin">Responses</Link>
-          <Link href="/admin/insights">Audience insights</Link>
+          <Link href="/admin/reports">Audience reports</Link>
+          <Link href="/admin/insights">Insights explorer</Link>
         </div>
         <form action={logout}>
           <button className="ghost small">Sign out</button>

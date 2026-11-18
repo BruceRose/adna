@@ -15,6 +15,13 @@
       "when": 1795019271529,
       "tag": "0001_event_tag",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795020669913,
+      "tag": "0002_audience_reports",
+      "breakpoints": true
     }
   ]
 }

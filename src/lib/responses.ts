@@ -96,6 +96,13 @@ export async function audienceRows(f: ResponseFilters) {
     .where(whereFor(f));
 }
 
+/** Ids of every response matching the filters (for "use all matching"). */
+export async function idsMatching(f: ResponseFilters) {
+  const db = await getDb();
+  const rows = await db.select({ id: responses.id }).from(responses).where(whereFor(f));
+  return rows.map((r) => r.id);
+}
+
 export function filtersFromParams(p: Record<string, string | string[] | undefined>): ResponseFilters {
   const one = (k: string) => {
     const v = p[k];

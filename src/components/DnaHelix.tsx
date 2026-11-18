@@ -7,7 +7,15 @@ import type { DimensionResult } from "@/lib/scoring";
  * taller where the lean is stronger. The twist is seeded from the code, so
  * different profiles look different.
  */
-export function DnaHelix({ dimensions, code }: { dimensions: DimensionResult[]; code: string }) {
+export function DnaHelix({
+  dimensions,
+  code,
+  label,
+}: {
+  dimensions: Pick<DimensionResult, "key" | "letter" | "percent">[];
+  code: string;
+  label?: string;
+}) {
   const W = 640;
   const H = 150;
   const mid = H / 2;
@@ -42,7 +50,7 @@ export function DnaHelix({ dimensions, code }: { dimensions: DimensionResult[]; 
 
   return (
     <figure className="helix">
-      <svg viewBox={`-6 0 ${W + 12} ${H + 40}`} role="img" aria-label={`Your DNA strand for ${code}`}>
+      <svg viewBox={`-6 0 ${W + 12} ${H + 32}`} role="img" aria-label={label ?? `Your DNA strand for ${code}`}>
         <defs>
           <linearGradient id="strand-grad" x1="0" x2="1" y1="0" y2="0">
             {DIMENSIONS.map((d, i) => (
@@ -78,7 +86,7 @@ export function DnaHelix({ dimensions, code }: { dimensions: DimensionResult[]; 
           opacity={0.55}
         />
         {dimensions.map((d, i) => (
-          <text key={d.key} x={seg * i + seg / 2} y={H + 30} textAnchor="middle" className="helix-letter" fill={`var(--strand-${d.key})`}>
+          <text key={d.key} x={seg * i + seg / 2} y={H + 24} textAnchor="middle" className="helix-letter" fill={`var(--strand-${d.key})`}>
             {d.letter}
           </text>
         ))}

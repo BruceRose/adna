@@ -33,3 +33,22 @@ export const responses = pgTable(
 
 export type ResponseRow = typeof responses.$inferSelect;
 export type NewResponse = typeof responses.$inferInsert;
+
+/** A saved selection of responses, viewed as one audience. */
+export const audienceReports = pgTable(
+  "audience_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    name: text("name").notNull(),
+    /** Optional context shown on the report, e.g. "Leadership offsite, March 2027". */
+    note: text("note"),
+    /** The responses in this audience. Deleted responses simply drop out. */
+    responseIds: jsonb("response_ids").$type<string[]>().notNull(),
+    /** Secret for the read-only client link (/r/<token>). */
+    shareToken: text("share_token").notNull().unique(),
+  },
+  (t) => [index("audience_reports_created_at_idx").on(t.createdAt)],
+);
+
+export type AudienceReportRow = typeof audienceReports.$inferSelect;

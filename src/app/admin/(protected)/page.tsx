@@ -2,6 +2,8 @@ import Link from "next/link";
 import { INDUSTRIES, OTHER_INDUSTRY, PROFILES } from "@/lib/questionnaire";
 import { filtersFromParams, listEvents, listResponses, profileCounts } from "@/lib/responses";
 import { formatDate, industryLabel } from "@/lib/format";
+import { createReport } from "../actions";
+import { SelectAll, SelectionBar } from "@/components/ReportTools";
 
 const PAGE_SIZE = 50;
 
@@ -103,10 +105,20 @@ export default async function AdminResponses({
       {rows.length === 0 ? (
         <p className="card muted">No responses yet{filtered ? " match these filters" : ""}.</p>
       ) : (
-        <div className="table-wrap">
+        <form id="report-form" action={createReport}>
+          <SelectionBar
+            formId="report-form"
+            matching={total}
+            suggestedName={filters.event ? `${filters.event} audience` : `Audience report ${new Date().toLocaleDateString("en-GB")}`}
+          />
+          {Object.entries(filters).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
+          <div className="table-wrap">
           <table>
             <thead>
               <tr>
+                <th className="check-col">
+                  <SelectAll formId="report-form" />
+                </th>
                 <th>Submitted</th>
                 <th>Name</th>
                 <th>Email</th>
@@ -118,6 +130,9 @@ export default async function AdminResponses({
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id}>
+                  <td className="check-col">
+                    <input type="checkbox" name="ids" value={r.id} aria-label={`Select ${r.name}`} />
+                  </td>
                   <td className="nowrap">{formatDate(r.createdAt)}</td>
                   <td>
                     <Link href={`/admin/responses/${r.id}`}>{r.name}</Link>
@@ -132,7 +147,8 @@ export default async function AdminResponses({
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </form>
       )}
 
       {pages > 1 && (

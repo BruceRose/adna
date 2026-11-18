@@ -7,7 +7,7 @@ import { getResponse } from "@/lib/responses";
 import { dimensionsFromScores, maxNetFor, pointsFor } from "@/lib/scoring";
 import { oppositePole } from "@/lib/questionnaire";
 import { removeResponse } from "../../../actions";
-import { ConfirmButton } from "./ConfirmButton";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 export default async function ResponseDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

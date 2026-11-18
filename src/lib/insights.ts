@@ -193,8 +193,80 @@ export function buildPersonalReport(code: string, scores: PoleScores, maxNet: nu
 }
 
 /* ------------------------------------------------------------------ */
-/* Audience insights for organisers                                    */
+/* Audience reports                                                    */
 /* ------------------------------------------------------------------ */
+
+/** Audience-level copy, per pole. */
+const AUDIENCE_POLE: Record<Pole, { adjective: string; present: string; minorityTip: string }> = {
+  extrovert: {
+    adjective: "outgoing",
+    present: "Get them involved early with polls, a show of hands or a quick chat with their neighbour.",
+    minorityTip: "give them chances to talk and interact, not just listen.",
+  },
+  introvert: {
+    adjective: "reflective",
+    present: "Give them a moment to think before asking for input, and offer ways to respond that aren't public, like anonymous Q&A.",
+    minorityTip: "don't rely only on big-room networking. Offer quieter ways to connect.",
+  },
+  thinking: {
+    adjective: "logic-led",
+    present: "Make a logical case, show your sources and welcome probing questions.",
+    minorityTip: "make sure there's solid evidence behind the story.",
+  },
+  feeling: {
+    adjective: "people-focused",
+    present: "Open with a human story and show how your message affects real people.",
+    minorityTip: "make sure there's a human story behind the data.",
+  },
+  judging: {
+    adjective: "organised",
+    present: "Start with a clear agenda, signpost where you are and finish on time.",
+    minorityTip: "share key timings and logistics clearly, even if the format is loose.",
+  },
+  perceiving: {
+    adjective: "flexible",
+    present: "Stay responsive. Be ready to follow the room's energy and questions rather than a rigid script.",
+    minorityTip: "leave some room for choice and discovery.",
+  },
+  sensing: {
+    adjective: "practical",
+    present: "Use concrete examples, demos and numbers people can picture.",
+    minorityTip: "include practical takeaways, not just vision.",
+  },
+  intuition: {
+    adjective: "big-picture",
+    present: "Paint the big picture first, then connect the dots to what it means for them.",
+    minorityTip: "include some big-picture vision, not just detail.",
+  },
+};
+
+/** What to do when an audience is evenly split on a pair. */
+const MIXED: Record<DimensionKey, { phrase: string; design: string; comms: string; present: string }> = {
+  TF: {
+    phrase: "a mix of logic-led and people-focused decision-makers",
+    design: "Pair evidence with emotion: back every story with data, and give every data point a human angle.",
+    comms: "Lead with the why and the people, then back it up with clear facts.",
+    present: "Tell a human story, then back it up with evidence.",
+  },
+  EI: {
+    phrase: "a mix of outgoing and reflective people",
+    design: "Balance lively networking with small-group and quiet options, so everyone can take part in their own way.",
+    comms: "Highlight both the chances to meet people and what they'll learn, and share details in advance.",
+    present: "Mix live participation with time to reflect, and offer both open-mic and anonymous ways to respond.",
+  },
+  JP: {
+    phrase: "a mix of planners and go-with-the-flow types",
+    design: "Give the day a clear backbone of agenda and timings, with optional extras people can explore.",
+    comms: "Share key times and logistics early, but leave some surprises to discover.",
+    present: "Signpost clearly, but stay responsive to questions and the energy in the room.",
+  },
+  SN: {
+    phrase: "a mix of practical and big-picture thinkers",
+    design: "Combine visionary keynotes with practical case studies and hands-on sessions.",
+    comms: "Sell the big idea and back it up with concrete examples.",
+    present: "Start with the big picture, then ground it in a real example.",
+  },
+};
 
 export interface AudienceDimension {
   key: DimensionKey;
@@ -203,10 +275,14 @@ export interface AudienceDimension {
   poles: [Pole, Pole];
   /** Share of respondents whose result was each pole (0–100). */
   share: [number, number];
-  /** Average spectrum position across respondents (0 = first pole, 100 = second). */
+  /** Every respondent's spectrum position (0 = first pole, 100 = second). */
+  positions: number[];
+  /** Average spectrum position across respondents. */
   avgPosition: number;
   /** "first" / "second" when one side clearly dominates (≥ 60%), otherwise "mixed". */
   lean: "first" | "second" | "mixed";
+  /** The dominant pole, if there is one. */
+  majority?: Pole;
 }
 
 export interface AudienceRecommendation {
@@ -216,59 +292,148 @@ export interface AudienceRecommendation {
   comms: string;
 }
 
+export interface PlaybookItem {
+  key: DimensionKey;
+  text: string;
+}
+
 export interface AudienceReport {
   total: number;
+  /** True for very small groups, where results are only indicative. */
+  smallSample: boolean;
+  headline: string;
   dimensions: AudienceDimension[];
   recommendations: AudienceRecommendation[];
   /** The audience's "average" profile: the majority letter on each pair. */
   typicalCode: string;
+  /** How many respondents have each profile code. */
+  profileCounts: Record<string, number>;
+  /** Event formats, ranked by the share of the audience they suit. */
+  formats: { name: string; fit: number; key: DimensionKey }[];
+  /** Advice by role, strongest-leaning strand first. */
+  playbook: { planners: PlaybookItem[]; content: PlaybookItem[]; presenters: PlaybookItem[] };
+  /** Things that would drain a large part of the audience. */
+  avoid: { text: string; share: number; key: DimensionKey }[];
+  /** Significant minorities not to forget. */
+  watchOuts: { text: string; share: number; key: DimensionKey }[];
 }
 
-export function buildAudienceReport(
-  rows: { scores: PoleScores; version: string }[],
-): AudienceReport | null {
+export function buildAudienceReport(rows: { scores: PoleScores; version: string }[]): AudienceReport | null {
   if (rows.length === 0) return null;
   const perRow = rows.map((r) => dimensionsFromScores(r.scores, maxNetFor(r.version)));
+  const pct = (n: number) => Math.round((n / rows.length) * 100);
 
   const dimensions: AudienceDimension[] = DIMENSIONS.map((def, i) => {
-    const firstCount = perRow.filter((d) => d[i].winner === def.poles[0]).length;
-    const firstShare = Math.round((firstCount / rows.length) * 100);
-    const avgPosition = Math.round(perRow.reduce((sum, d) => sum + d[i].position, 0) / rows.length);
+    const firstShare = pct(perRow.filter((d) => d[i].winner === def.poles[0]).length);
+    const positions = perRow.map((d) => d[i].position);
+    const lean = firstShare >= 60 ? "first" : firstShare <= 40 ? "second" : "mixed";
     return {
       key: def.key,
       name: def.name,
       label: def.label,
       poles: def.poles,
       share: [firstShare, 100 - firstShare],
-      avgPosition,
-      lean: firstShare >= 60 ? "first" : firstShare <= 40 ? "second" : "mixed",
+      positions,
+      avgPosition: Math.round(positions.reduce((a, b) => a + b, 0) / rows.length),
+      lean,
+      majority: lean === "first" ? def.poles[0] : lean === "second" ? def.poles[1] : undefined,
     };
   });
 
+  const shareOf = (pole: Pole) => {
+    const d = dimensions.find((x) => x.poles.includes(pole))!;
+    return d.share[d.poles.indexOf(pole)];
+  };
+
+  // Strongest consensus first, so the most important advice leads.
+  const byConsensus = [...dimensions].sort((a, b) => Math.max(...b.share) - Math.max(...a.share));
+
   const recommendations = dimensions.map((d): AudienceRecommendation => {
-    const [a, b] = d.poles;
-    if (d.lean === "mixed") {
+    if (!d.majority) {
+      const [a, b] = d.poles;
       return {
         dimension: d.name,
         heading: `A mix of ${POLE_INFO[a].friendly.toLowerCase()} and ${POLE_INFO[b].friendly.toLowerCase()}`,
-        design: `Cater for both. ${POLE_CONTENT[a].organiser.design} At the same time: ${lowerFirst(POLE_CONTENT[b].organiser.design)}`,
-        comms: `${POLE_CONTENT[a].organiser.comms} ${POLE_CONTENT[b].organiser.comms}`,
+        design: MIXED[d.key].design,
+        comms: MIXED[d.key].comms,
       };
     }
-    const pole = d.lean === "first" ? a : b;
-    const share = d.lean === "first" ? d.share[0] : d.share[1];
     return {
       dimension: d.name,
-      heading: `Mostly ${POLE_INFO[pole].friendly.toLowerCase()} (${share}%)`,
-      design: POLE_CONTENT[pole].organiser.design,
-      comms: POLE_CONTENT[pole].organiser.comms,
+      heading: `Mostly ${POLE_INFO[d.majority].friendly.toLowerCase()} (${shareOf(d.majority)}%)`,
+      design: POLE_CONTENT[d.majority].organiser.design,
+      comms: POLE_CONTENT[d.majority].organiser.comms,
     };
   });
 
-  const typicalCode = dimensions.map((d) => POLE_INFO[d.share[0] >= 50 ? d.poles[0] : d.poles[1]].letter).join("");
-  return { total: rows.length, dimensions, recommendations, typicalCode };
+  const playbookFor = (pick: (d: AudienceDimension) => string) => byConsensus.map((d) => ({ key: d.key, text: pick(d) }));
+  const playbook = {
+    planners: playbookFor((d) => (d.majority ? POLE_CONTENT[d.majority].organiser.design : MIXED[d.key].design)),
+    content: playbookFor((d) => (d.majority ? POLE_CONTENT[d.majority].organiser.comms : MIXED[d.key].comms)),
+    presenters: playbookFor((d) => (d.majority ? AUDIENCE_POLE[d.majority].present : MIXED[d.key].present)),
+  };
+
+  // Formats: every format from every pole, scored by the share of people on that pole.
+  const formats = DIMENSIONS.flatMap((def) =>
+    def.poles.flatMap((pole) => POLE_CONTENT[pole].formats.map((name) => ({ name, fit: shareOf(pole), key: def.key }))),
+  )
+    .filter((f) => f.fit > 0)
+    .sort((a, b) => b.fit - a.fit || a.name.localeCompare(b.name));
+
+  const avoid = DIMENSIONS.flatMap((def) =>
+    def.poles.map((pole) => ({ text: POLE_CONTENT[pole].drains, share: shareOf(pole), key: def.key })),
+  )
+    .filter((a) => a.share >= 50)
+    .sort((a, b) => b.share - a.share);
+
+  const watchOuts = dimensions
+    .filter((d) => d.majority)
+    .map((d) => {
+      const minority = oppositePole(d.majority!);
+      const share = shareOf(minority);
+      return {
+        share,
+        key: d.key,
+        text: `${share}% are ${AUDIENCE_POLE[minority].adjective}: ${AUDIENCE_POLE[minority].minorityTip}`,
+      };
+    })
+    .filter((w) => w.share >= 20)
+    .sort((a, b) => b.share - a.share);
+
+  const profileCounts: Record<string, number> = {};
+  for (const d of perRow) {
+    const code = d.map((x) => x.letter).join("");
+    profileCounts[code] = (profileCounts[code] ?? 0) + 1;
+  }
+
+  // Majority letter on each pair; an exact 50/50 split is settled by the average lean.
+  const typicalCode = dimensions
+    .map((d) => {
+      const first = d.share[0] > 50 || (d.share[0] === 50 && d.avgPosition <= 50);
+      return POLE_INFO[first ? d.poles[0] : d.poles[1]].letter;
+    })
+    .join("");
+
+  return {
+    total: rows.length,
+    smallSample: rows.length < 5,
+    headline: headlineFor(byConsensus),
+    dimensions,
+    recommendations,
+    typicalCode,
+    profileCounts,
+    formats,
+    playbook,
+    avoid,
+    watchOuts,
+  };
 }
 
-function lowerFirst(s: string) {
-  return s.charAt(0).toLowerCase() + s.slice(1);
+function headlineFor(dims: AudienceDimension[]): string {
+  const adjectives = dims.filter((d) => d.majority).map((d) => AUDIENCE_POLE[d.majority!].adjective);
+  const mixed = dims.filter((d) => !d.majority).map((d) => MIXED[d.key].phrase);
+  const list = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+  if (adjectives.length === 0) return `A genuinely mixed audience: ${list(mixed)}.`;
+  const article = /^[aeiou]/.test(adjectives[0]) ? "An" : "A";
+  return `${article} ${adjectives.join(", ")} audience${mixed.length ? `, with ${list(mixed)}` : ""}.`;
 }

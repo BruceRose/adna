@@ -6,9 +6,10 @@ Audience DNA profile and gives them a personal report covering how they like to
 connect, the event formats that suit them, how to communicate with them, and
 which profiles they'll click with.
 
-For organisers, responses can be tagged to an event. The **Audience insights**
-page then shows that audience's make-up, with recommendations for event design
-and comms.
+For planners, content teams and clients, any group of respondents can be turned
+into an **audience report**: a visual "fingerprint" of how the audience leans, with
+practical advice on how to design for, write for and present to them. Each report
+can be shared through a read-only client link or saved as a PDF.
 
 ## Quick start (local)
 
@@ -74,7 +75,39 @@ After answering, respondents see:
   (their "stretch connection")
 - a share button. Shared links show a preview card with the profile but no personal details.
 
-## Events and audience insights
+## Audience reports
+
+An audience report shows a group of people as one audience: how they lean, and how best to connect with
+them. It's designed for event planners, content and comms teams, and clients.
+
+**Creating one**
+1. Go to **Responses** and filter by event, industry or profile if you like.
+2. Tick the people in your audience, or use **Use all N matching**.
+3. Name the report and create it. You can also save any slice from the **Insights explorer**.
+
+The report stores which people are in it. If someone is deleted later, they drop out of the report.
+
+**What's in it**
+- a one-line summary (e.g. "An outgoing, organised, logic-led audience, with a mix of practical and
+  big-picture thinkers") and the lean on each strand
+- a combined DNA strand and the audience's "typical" profile
+- **How this audience leans**: one dot per person on each strand, with the average marked
+- **Profile map**: a 4×4 grid of the 16 profiles, shaded by how many people have each (the audience's
+  fingerprint)
+- **How to connect with this audience**: advice for event planners, for content and comms, and for
+  presenters and hosts, starting with what matters most for this group
+- **Formats that will land** (ranked by how much of the audience they suit), **What to avoid**, and
+  **Don't forget** (significant minorities who need something different)
+- a note when the group is small (under 5 people), since the patterns are only indicative
+
+**Sharing**
+- **Copy client link** gives a read-only link (`/r/…`) that anyone can open without logging in. It shows
+  only combined results: no names, emails or industries.
+- **Reset client link** issues a new link, and the old one stops working.
+- **Print / save as PDF** gives a clean, printable version.
+- The list of people in the audience is only shown to admins.
+
+## Events
 
 Add `?event=` and a name to the questionnaire link, e.g.
 
@@ -82,13 +115,8 @@ Add `?event=` and a name to the questionnaire link, e.g.
 https://your-site/?event=summit-2027
 ```
 
-Everyone using that link is tagged with the event. In the admin area, **Audience insights** shows, for any
-event and/or industry:
-- how many people responded, and the audience's "typical" profile
-- the split on each strand
-- recommendations for **event design** and **comms**, based on which way the audience leans (or a "cater for
-  both" recommendation when it's mixed)
-- the profile mix
+Everyone using that link is tagged with the event, so you can filter by it in Responses and the Insights
+explorer, and build a report from it.
 
 ## Admin area
 
@@ -97,7 +125,7 @@ event and/or industry:
 - a list of responses with search (name/email), industry and profile filters
 - a profile-mix summary
 - a page per response with every answer and the points it scored
-- an event filter
+- an event filter, plus checkboxes for building audience reports
 - **Export Excel / Export CSV**, which use the current filters. The layout follows the original spreadsheet:
   identity (including event and version), the statements, 8 pole scores, 4 letters, 4 % leans, code, profile
 - deleting an individual response (e.g. for GDPR erasure requests)
@@ -143,13 +171,14 @@ and commit the new file in `./drizzle`.
 ```
 src/lib/questionnaire.ts   statements, pairs, profiles, scale, industries, versions
 src/lib/scoring.ts         scoring engine (pure functions)
-src/lib/insights.ts        personal report + audience insights content and logic
+src/lib/insights.ts        personal report + audience report content and logic
+src/lib/reports.ts         saved audience reports (data access)
 src/lib/validation.ts      input validation (zod)
 src/lib/db/                schema + connection (Postgres or embedded PGlite)
 src/lib/responses.ts       data access
 src/lib/export.ts          CSV / Excel export
 src/lib/auth.ts            admin session
-src/components/            DNA helix, strand spectrums, share button
-src/app/                   pages: questionnaire, results (+ share image), admin, insights
+src/components/            DNA helix, strand spectrums, audience report view, share/report tools
+src/app/                   pages: questionnaire, results (+ share image), admin, reports, client report (/r/…)
 tests/                     scoring tests + spreadsheet fixture
 ```
