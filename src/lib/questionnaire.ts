@@ -100,28 +100,118 @@ export const SCALE = [
 export interface Profile {
   code: string;
   name: string;
-  /** Optional copy shown to respondents. Fill in when ready. */
-  description?: string;
+  /** Short summary shown to respondents on their results page. */
+  description: string;
 }
 
-/** Code is built as [T|F][E|I][J|P][S|I]. */
+/**
+ * Code is built as [T|F][E|I][J|P][S|I].
+ *
+ * Names and descriptions follow "Full Profiles" (Full_Profiles_edit_1.docx).
+ * Descriptions are condensed from each profile's "Main" section.
+ *
+ * Note: the original FinalADNA_Analysis.xlsx had TIPI = Pragmatist and
+ * TIPS = Theorist. The profiles document has them the other way round
+ * (TIPS = Pragmatist, the grounded/practical type; TIPI = Theorist, the
+ * big-picture type). We follow the document.
+ */
 export const PROFILES: Profile[] = [
-  { code: "TEJS", name: "Architect" },
-  { code: "TEJI", name: "Strategist" },
-  { code: "TEPS", name: "Explorer" },
-  { code: "TEPI", name: "Innovator" },
-  { code: "TIJS", name: "Analyst" },
-  { code: "TIJI", name: "Scholar" },
-  { code: "TIPI", name: "Pragmatist" },
-  { code: "TIPS", name: "Theorist" },
-  { code: "FEJS", name: "Coordinator" },
-  { code: "FEJI", name: "Advocate" },
-  { code: "FEPS", name: "Harmoniser" },
-  { code: "FEPI", name: "Inspirer" },
-  { code: "FIJS", name: "Counsellor" },
-  { code: "FIJI", name: "Empath" },
-  { code: "FIPS", name: "Nurturer" },
-  { code: "FIPI", name: "Dreamer" },
+  {
+    code: "TEJS",
+    name: "Architect",
+    description:
+      "Logical and objective, you bring clarity to complex problems, and your energy and communication skills make you a natural leader. Organised and practical, you turn ideas into real results.",
+  },
+  {
+    code: "TEJI",
+    name: "Strategist",
+    description:
+      "A clear, logical thinker and confident communicator, you inspire others and lead with purpose. You combine order and follow-through with a talent for seeing the big picture and spotting patterns.",
+  },
+  {
+    code: "TEPS",
+    name: "Explorer",
+    description:
+      "Sharp, logical and sociable, you draw energy from people and think on your feet. You love freedom and spontaneity, seize opportunities as they come and stay grounded in what's real.",
+  },
+  {
+    code: "TEPI",
+    name: "Innovator",
+    description:
+      "Analytical and outgoing, you bring clarity and enthusiasm to every challenge. You thrive on freedom and change, and you're always looking ahead to big ideas and new possibilities.",
+  },
+  {
+    code: "TIJS",
+    name: "Analyst",
+    description:
+      "Logical, objective and quietly thoughtful, you solve problems with remarkable clarity. Reliable and practical, you prefer order, follow through on commitments and trust what experience has proven.",
+  },
+  {
+    code: "TIJI",
+    name: "Scholar",
+    description:
+      "A deep, independent thinker, you value logic and look beyond the surface to understand how things really work. Organised and reliable, you pair structure with a talent for big-picture thinking.",
+  },
+  {
+    code: "TIPS",
+    name: "Pragmatist",
+    description:
+      "Logical and independent, you think deeply and stay objective under pressure. Adaptable and down-to-earth, you enjoy freedom, seize opportunities and focus on what is rather than what could be.",
+  },
+  {
+    code: "TIPI",
+    name: "Theorist",
+    description:
+      "Analytical and introspective, you think deeply and see beyond the surface. Free-spirited and imaginative, you're drawn to big ideas, patterns and possibilities, and like to keep your options open.",
+  },
+  {
+    code: "FEJS",
+    name: "Coordinator",
+    description:
+      "Your empathy builds deep connections and earns lasting trust, and your sociable energy brings people together. Reliable and organised, you're grounded in what's practical and you get things done.",
+  },
+  {
+    code: "FEJI",
+    name: "Advocate",
+    description:
+      "You connect with people deeply and inspire trust, and your communication skills make you a natural leader. You value order and reliability, and you can see the big picture and spot new possibilities.",
+  },
+  {
+    code: "FEPS",
+    name: "Harmoniser",
+    description:
+      "Empathetic and sociable, you build trust and loyalty wherever you go and bring warmth to any group. You thrive on spontaneity while staying grounded in the practical here and now.",
+  },
+  {
+    code: "FEPI",
+    name: "Inspirer",
+    description:
+      "A warm, enthusiastic communicator, you form deep connections and inspire the people around you. Spontaneous and imaginative, you're energised by new ideas and future possibilities.",
+  },
+  {
+    code: "FIJS",
+    name: "Counsellor",
+    description:
+      "Deeply empathetic and quietly thoughtful, you understand people on a level others often miss. You value order and reliability, and stay grounded in what works in practice.",
+  },
+  {
+    code: "FIJI",
+    name: "Empath",
+    description:
+      "Compassionate and intuitive, you're a source of support and warmth, with a quiet ability to see beneath the surface. You follow through on commitments and bring big-picture thinking to everything you do.",
+  },
+  {
+    code: "FIPS",
+    name: "Nurturer",
+    description:
+      "Warm, compassionate and quietly reflective, you're a natural source of support for those around you. You adapt easily, enjoy freedom and spontaneity, and draw on real experience to stay grounded.",
+  },
+  {
+    code: "FIPI",
+    name: "Dreamer",
+    description:
+      "Compassionate and introspective, you see beneath the surface of people and situations. Free-spirited and imaginative, you're drawn to possibilities, big ideas and creative solutions.",
+  },
 ];
 
 export const OTHER_INDUSTRY = "Other";

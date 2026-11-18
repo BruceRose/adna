@@ -40,9 +40,13 @@ Each statement leans towards one side of a pair:
   spreadsheet's `IF(x>y, …)` formulas.
 - The four letters form a code such as `TEJI`, which maps to one of 16 profiles (Strategist, etc.).
   As in the spreadsheet, the 4th letter uses `I` for Intuition.
+- Profile names and the short descriptions shown on the results page come from the
+  *Full Profiles* document. **Note:** the original spreadsheet had TIPI = Pragmatist and
+  TIPS = Theorist. The app follows the document instead (TIPS = Pragmatist,
+  TIPI = Theorist), because that's what the descriptions fit.
 
-All of this, plus the statement text, scale labels, profile names (with optional
-descriptions) and the industry list, is set in **`src/lib/questionnaire.ts`**. The scoring
+All of this, plus the statement text, scale labels, profile names and
+descriptions and the industry list, is set in **`src/lib/questionnaire.ts`**. The scoring
 logic is in `src/lib/scoring.ts`.
 
 Each response stores its raw answers, the eight pole scores, the code, the profile and a

@@ -19,13 +19,13 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
   return (
     <section className="card result">
       <p className="eyebrow">Your Audience DNA profile</p>
-      <h1 className="profile-name">{row.profile}</h1>
+      <h1 className="profile-name">{profile?.name ?? row.profile}</h1>
       <p className="code" aria-label={`Code ${row.code}`}>
         {row.code.split("").map((l, i) => (
           <span key={i}>{l}</span>
         ))}
       </p>
-      {profile?.description && <p className="lede">{profile.description}</p>}
+      {profile?.description && <p className="profile-desc">{profile.description}</p>}
 
       <h2 className="section-title">How you scored</h2>
       <p className="muted">

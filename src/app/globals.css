@@ -196,3 +196,4 @@ tbody tr:last-child td { border-bottom: 0; }
 .danger-zone { margin-top: 8px; }
 body:has(.admin) .site-header { max-width: 1100px; }
 .card > .section-title:first-child { margin-top: 0; }
+.profile-desc { font-size: 1.15rem; line-height: 1.55; margin: 0 0 0.5rem; max-width: 60ch; }
