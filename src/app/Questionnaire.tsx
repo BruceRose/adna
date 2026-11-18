@@ -19,7 +19,7 @@ interface DetailsState {
 const EMPTY: DetailsState = { name: "", email: "", industry: "", industryOther: "", consent: false };
 const ADVANCE_DELAY_MS = 220;
 
-export function Questionnaire() {
+export function Questionnaire({ event }: { event?: string }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("details");
   const [details, setDetails] = useState<DetailsState>(EMPTY);
@@ -104,6 +104,7 @@ export function Questionnaire() {
           consent: details.consent as true,
         },
         answers,
+        event,
       });
       if (res.ok) {
         router.push(`/results/${res.id}`);
@@ -122,8 +123,8 @@ export function Questionnaire() {
       <section className="card">
         <h1>Discover your Audience DNA</h1>
         <p className="lede">
-          {total} quick statements, about 3 minutes. There are no right or wrong answers, so just go with your gut.
-          We&apos;ll reveal your profile at the end.
+          {total} quick statements, about {Math.max(2, Math.round(total / 5))} minutes. There are no right or wrong
+          answers, so just go with your gut. At the end you&apos;ll discover your profile and how you like to connect.
         </p>
         <form onSubmit={startQuestions} noValidate className="form">
           <Field label="Your name" error={errors.name} htmlFor="name">

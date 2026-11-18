@@ -11,9 +11,11 @@ export const responses = pgTable(
     industry: text("industry").notNull(),
     /** Free text when industry = "Other". */
     industryOther: text("industry_other"),
+    /** Optional event tag from the questionnaire link, e.g. ?event=summit-2027. */
+    event: text("event"),
     consentAt: timestamp("consent_at", { withTimezone: true }).notNull(),
     questionnaireVersion: text("questionnaire_version").notNull(),
-    /** Raw answers keyed by statement id (q1..q16), each 1–6. */
+    /** Raw answers keyed by statement id (ids depend on questionnaire_version), each 1–6. */
     answers: jsonb("answers").$type<Answers>().notNull(),
     /** Points per pole, as computed at submission time. */
     scores: jsonb("scores").$type<PoleScores>().notNull(),
@@ -25,6 +27,7 @@ export const responses = pgTable(
     index("responses_email_idx").on(t.email),
     index("responses_profile_idx").on(t.profile),
     index("responses_industry_idx").on(t.industry),
+    index("responses_event_idx").on(t.event),
   ],
 );
 

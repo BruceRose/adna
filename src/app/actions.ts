@@ -27,9 +27,9 @@ export async function submitResponse(input: Submission): Promise<SubmitResult> {
     };
   }
 
-  const { details, answers } = parsed.data;
+  const { details, answers, event } = parsed.data;
   // Always score on the server. Never trust a score sent by the browser.
-  const result = scoreAnswers(answers);
+  const result = scoreAnswers(answers, QUESTIONNAIRE_VERSION);
 
   try {
     const id = await insertResponse({
@@ -37,6 +37,7 @@ export async function submitResponse(input: Submission): Promise<SubmitResult> {
       email: details.email,
       industry: details.industry,
       industryOther: details.industry === "Other" ? (details.industryOther ?? null) : null,
+      event: event ?? null,
       consentAt: new Date(),
       questionnaireVersion: QUESTIONNAIRE_VERSION,
       answers,

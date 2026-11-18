@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { INDUSTRIES, OTHER_INDUSTRY, PROFILES } from "@/lib/questionnaire";
-import { filtersFromParams, listResponses, profileCounts } from "@/lib/responses";
+import { filtersFromParams, listEvents, listResponses, profileCounts } from "@/lib/responses";
 import { formatDate, industryLabel } from "@/lib/format";
 
 const PAGE_SIZE = 50;
@@ -14,9 +14,10 @@ export default async function AdminResponses({
   const filters = filtersFromParams(params);
   const page = Math.max(1, Number(params.page) || 1);
 
-  const [{ rows, total }, counts] = await Promise.all([
+  const [{ rows, total }, counts, events] = await Promise.all([
     listResponses(filters, page, PAGE_SIZE),
     profileCounts(filters),
+    listEvents(),
   ]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const maxCount = Math.max(1, ...counts.map((c) => c.n));
@@ -27,7 +28,7 @@ export default async function AdminResponses({
     const s = sp.toString();
     return s ? `?${s}` : "";
   };
-  const filtered = Boolean(filters.q || filters.industry || filters.profile);
+  const filtered = Boolean(filters.q || filters.industry || filters.profile || filters.event);
 
   return (
     <>
@@ -50,6 +51,14 @@ export default async function AdminResponses({
 
       <form className="filters" method="get">
         <input name="q" placeholder="Search name or email" defaultValue={filters.q} aria-label="Search" />
+        <select name="event" defaultValue={filters.event ?? ""} aria-label="Event">
+          <option value="">All events</option>
+          {events.map((e) => (
+            <option key={e.event} value={e.event!}>
+              {e.event} ({e.n})
+            </option>
+          ))}
+        </select>
         <select name="industry" defaultValue={filters.industry ?? ""} aria-label="Industry">
           <option value="">All industries</option>
           {[...INDUSTRIES, OTHER_INDUSTRY].map((i) => (
@@ -102,6 +111,7 @@ export default async function AdminResponses({
                 <th>Name</th>
                 <th>Email</th>
                 <th>Industry</th>
+                <th>Event</th>
                 <th>Profile</th>
               </tr>
             </thead>
@@ -114,6 +124,7 @@ export default async function AdminResponses({
                   </td>
                   <td>{r.email}</td>
                   <td>{industryLabel(r)}</td>
+                  <td>{r.event ?? <span className="muted">–</span>}</td>
                   <td className="nowrap">
                     {r.profile} <span className="muted">{r.code}</span>
                   </td>

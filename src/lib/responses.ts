@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNotNull, or, type SQL } from "drizzle-orm";
 import { getDb, schema } from "./db";
 import type { NewResponse } from "./db/schema";
 
@@ -9,6 +9,7 @@ export interface ResponseFilters {
   q?: string;
   industry?: string;
   profile?: string;
+  event?: string;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -21,6 +22,7 @@ function whereFor(f: ResponseFilters): SQL | undefined {
   }
   if (f.industry) parts.push(eq(responses.industry, f.industry));
   if (f.profile) parts.push(eq(responses.profile, f.profile));
+  if (f.event) parts.push(eq(responses.event, f.event));
   return parts.length ? and(...parts) : undefined;
 }
 
@@ -74,11 +76,31 @@ export async function allResponses(f: ResponseFilters) {
   return db.select().from(responses).where(whereFor(f)).orderBy(responses.createdAt);
 }
 
+/** Distinct event tags with response counts, for filter dropdowns. */
+export async function listEvents() {
+  const db = await getDb();
+  return db
+    .select({ event: responses.event, n: count() })
+    .from(responses)
+    .where(isNotNull(responses.event))
+    .groupBy(responses.event)
+    .orderBy(asc(responses.event));
+}
+
+/** Just what the audience insights need: scores and questionnaire version. */
+export async function audienceRows(f: ResponseFilters) {
+  const db = await getDb();
+  return db
+    .select({ scores: responses.scores, version: responses.questionnaireVersion })
+    .from(responses)
+    .where(whereFor(f));
+}
+
 export function filtersFromParams(p: Record<string, string | string[] | undefined>): ResponseFilters {
   const one = (k: string) => {
     const v = p[k];
     const s = (Array.isArray(v) ? v[0] : v)?.trim();
     return s ? s.slice(0, 200) : undefined;
   };
-  return { q: one("q"), industry: one("industry"), profile: one("profile") };
+  return { q: one("q"), industry: one("industry"), profile: one("profile"), event: one("event") };
 }

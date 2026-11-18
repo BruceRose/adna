@@ -20,9 +20,27 @@ export const answersSchema = z.strictObject(
   Object.fromEntries(STATEMENTS.map((s) => [s.id, answerValue])) as Record<string, typeof answerValue>,
 );
 
+/**
+ * Event tag from the link (?event=…). Normalised to a lowercase slug; anything
+ * unusable is dropped rather than blocking the respondent.
+ */
+export const eventSchema = z
+  .string()
+  .optional()
+  .transform((v) => {
+    const slug = (v ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60);
+    return slug || undefined;
+  });
+
 export const submissionSchema = z.object({
   details: detailsSchema,
   answers: answersSchema,
+  event: eventSchema,
 });
 
 export type Details = z.input<typeof detailsSchema>;

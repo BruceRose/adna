@@ -1,13 +1,13 @@
 import "server-only";
 import ExcelJS from "exceljs";
 import type { ResponseRow } from "./db/schema";
-import { DIMENSIONS, POLE_INFO, STATEMENTS, type Pole } from "./questionnaire";
-import { dimensionsFromScores } from "./scoring";
+import { DIMENSIONS, POLE_INFO, QUESTIONNAIRE_VERSION, STATEMENTS, type Pole } from "./questionnaire";
+import { dimensionsFromScores, maxNetFor } from "./scoring";
 import { industryLabel } from "./format";
 
 /**
  * Column layout mirrors the original FinalADNA_Analysis.xlsx:
- * identity → 16 statements → 8 pole scores → 4 letters → code → profile.
+ * identity → statements → 8 pole scores → 4 letters → 4 % leans → code → profile.
  */
 const SCORE_ORDER: Pole[] = [
   "feeling",
@@ -20,7 +20,7 @@ const SCORE_ORDER: Pole[] = [
   "sensing",
 ];
 
-const IDENTITY_HEADERS = ["#", "Response ID", "Submitted (UTC)", "Name", "Email", "Industry"];
+const IDENTITY_HEADERS = ["#", "Response ID", "Submitted (UTC)", "Name", "Email", "Industry", "Event", "Version"];
 
 export function exportHeaders(): { group: string[]; header: string[] } {
   const group = [
@@ -28,6 +28,7 @@ export function exportHeaders(): { group: string[]; header: string[] } {
     ...STATEMENTS.map((s) => `Agree → ${POLE_INFO[s.agreePole].label}`),
     ...SCORE_ORDER.map(() => "Points"),
     ...DIMENSIONS.map(() => "Letter"),
+    ...DIMENSIONS.map(() => "% lean"),
     "",
     "",
   ];
@@ -36,6 +37,7 @@ export function exportHeaders(): { group: string[]; header: string[] } {
     ...STATEMENTS.map((s) => s.text),
     ...SCORE_ORDER.map((p) => POLE_INFO[p].label),
     ...DIMENSIONS.map((d) => d.label.replace(/\s/g, "")),
+    ...DIMENSIONS.map((d) => d.name),
     "Code",
     "Audience DNA Profile",
   ];
@@ -43,7 +45,7 @@ export function exportHeaders(): { group: string[]; header: string[] } {
 }
 
 export function exportRow(r: ResponseRow, index: number): (string | number)[] {
-  const dims = dimensionsFromScores(r.scores);
+  const dims = dimensionsFromScores(r.scores, maxNetFor(r.questionnaireVersion));
   return [
     index + 1,
     r.id,
@@ -51,9 +53,13 @@ export function exportRow(r: ResponseRow, index: number): (string | number)[] {
     r.name,
     r.email,
     industryLabel(r),
-    ...STATEMENTS.map((s) => r.answers[s.id]),
+    r.event ?? "",
+    r.questionnaireVersion,
+    // Statement columns are for the current version; older versions' answers are left blank.
+    ...STATEMENTS.map((s) => (r.questionnaireVersion === QUESTIONNAIRE_VERSION ? r.answers[s.id] : "")),
     ...SCORE_ORDER.map((p) => r.scores[p]),
     ...dims.map((d) => d.letter),
+    ...dims.map((d) => `${d.percent}% ${POLE_INFO[d.winner].friendly}`),
     r.code,
     r.profile,
   ];
@@ -86,7 +92,7 @@ export async function toXlsx(rows: ResponseRow[]): Promise<Buffer> {
   rows.forEach((r, i) => ws.addRow(exportRow(r, i)));
 
   ws.columns.forEach((col, i) => {
-    col.width = i < IDENTITY_HEADERS.length ? [5, 38, 20, 24, 30, 26][i] : i < IDENTITY_HEADERS.length + 16 ? 14 : 12;
+    col.width = i < IDENTITY_HEADERS.length ? [5, 38, 20, 24, 30, 26, 18, 8][i] : 14;
   });
   ws.autoFilter = { from: { row: 2, column: 1 }, to: { row: 2, column: header.length } };
 

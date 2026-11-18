@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DimensionBars } from "@/components/DimensionBars";
 import { formatDate, industryLabel } from "@/lib/format";
-import { POLE_INFO, STATEMENTS } from "@/lib/questionnaire";
+import { POLE_INFO, versionDef } from "@/lib/questionnaire";
 import { getResponse } from "@/lib/responses";
-import { dimensionsFromScores, pointsFor } from "@/lib/scoring";
+import { dimensionsFromScores, maxNetFor, pointsFor } from "@/lib/scoring";
 import { oppositePole } from "@/lib/questionnaire";
 import { removeResponse } from "../../../actions";
 import { ConfirmButton } from "./ConfirmButton";
@@ -13,6 +13,7 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
   const { id } = await params;
   const row = await getResponse(id);
   if (!row) notFound();
+  const { statements, weights } = versionDef(row.questionnaireVersion);
 
   return (
     <>
@@ -25,6 +26,7 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
             <h1>{row.name}</h1>
             <p className="muted">
               {row.email} · {industryLabel(row)}
+              {row.event && <> · Event: {row.event}</>}
             </p>
           </div>
           <div className="profile-chip">
@@ -51,7 +53,7 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
             </dd>
           </div>
         </dl>
-        <DimensionBars dimensions={dimensionsFromScores(row.scores)} />
+        <DimensionBars dimensions={dimensionsFromScores(row.scores, maxNetFor(row.questionnaireVersion))} />
       </section>
 
       <section className="card">
@@ -67,9 +69,9 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
               </tr>
             </thead>
             <tbody>
-              {STATEMENTS.map((s, i) => {
+              {statements.map((s, i) => {
                 const a = row.answers[s.id];
-                const p = a ? pointsFor(a) : null;
+                const p = a ? pointsFor(a, weights) : null;
                 return (
                   <tr key={s.id}>
                     <td>{i + 1}</td>
