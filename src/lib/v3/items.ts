@@ -11,7 +11,7 @@ export const QUESTIONNAIRE_VERSION = "3";
 
 export const INTRO = {
   title: "Discover your Audience DNA",
-  body: "About 6 minutes. You'll answer some quick questions about how you like to experience work events. There are no right or wrong answers. At the end you'll see your event style and what helps you get the most out of events.",
+  body: "Welcome! You're about to answer some quick questions about how you like to experience events. There are no right or wrong answers. At the end you'll see your event style and what helps you get the most out of events.",
 } as const;
 
 export const SECTION_LABELS = {
