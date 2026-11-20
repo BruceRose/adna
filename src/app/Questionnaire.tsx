@@ -23,6 +23,15 @@ import {
 } from "@/lib/v3/items";
 import type { FieldErrors } from "@/lib/v3/validation";
 import {
+  CONSENT_BULLETS,
+  CONSENT_BUTTON,
+  CONSENT_CHECKBOX_LABEL,
+  CONSENT_CHOICES,
+  CONSENT_ERROR,
+  CONSENT_HEADING,
+  INTRO_CONSENT_LINE,
+} from "@/lib/consent";
+import {
   AUTO_ADVANCE,
   EMPTY_DRAFT,
   PREF_KEYS,
@@ -148,7 +157,7 @@ export function Questionnaire({ seed, event, wave, aid, pilot }: Props) {
     const e: FieldErrors = {};
     if (!details.name.trim()) e.name = "Please enter your name";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email.trim())) e.email = "Please enter a valid email address";
-    if (!details.consent) e.consent = "Please confirm you're happy for us to store your answers";
+    if (!details.consent) e.consent = CONSENT_ERROR;
     return e;
   }
 
@@ -232,6 +241,7 @@ export function Questionnaire({ seed, event, wave, aid, pilot }: Props) {
       <section className="card intro">
         <h1>{INTRO.title}</h1>
         <p className="lede">{INTRO.body}</p>
+        <p className="muted intro-consent">{INTRO_CONSENT_LINE}</p>
         <button type="button" className="primary" onClick={next}>
           Let&apos;s go →
         </button>
@@ -267,18 +277,26 @@ export function Questionnaire({ seed, event, wave, aid, pilot }: Props) {
               <input id="email" type="email" autoComplete="email" value={details.email} aria-invalid={!!errors.email}
                 onChange={(e) => setDetails({ ...details, email: e.target.value })} />
             </Field>
+            <ConsentNotice hasAid={Boolean(aid)} />
             <div className="field">
               <label className="checkbox">
                 <input type="checkbox" checked={details.consent} aria-invalid={!!errors.consent}
-                  onChange={(e) => setDetails({ ...details, consent: e.target.checked })} />
-                <span>I&apos;m happy for my details and answers to be stored so my Audience DNA profile can be created.</span>
+                  aria-describedby={errors.consent ? "consent-error" : undefined}
+                  onChange={(e) => {
+                    setDetails({ ...details, consent: e.target.checked });
+                    if (e.target.checked) setErrors((x) => ({ ...x, consent: undefined }));
+                  }} />
+                <span>{CONSENT_CHECKBOX_LABEL}</span>
               </label>
-              {errors.consent && <p className="error">{errors.consent}</p>}
+              {errors.consent && <p className="error" id="consent-error" role="alert">{errors.consent}</p>}
             </div>
             {formError && <p className="error banner">{formError}</p>}
             <div className="nav">
               <button type="button" className="ghost" onClick={back}>← Back</button>
-              <button type="submit" className="primary" disabled={pending}>{isLast ? submitLabel : "Continue →"}</button>
+              {/* aria-disabled rather than disabled, so a click still shows the error for screen-reader users. */}
+              <button type="submit" className="primary" aria-disabled={!details.consent || pending}>
+                {isLast ? submitLabel : CONSENT_BUTTON}
+              </button>
             </div>
           </form>
         )}
@@ -363,6 +381,30 @@ export function Questionnaire({ seed, event, wave, aid, pilot }: Props) {
           </div>
         )}
       </div>
+    </section>
+  );
+}
+
+function ConsentNotice({ hasAid }: { hasAid: boolean }) {
+  return (
+    <section className="consent-notice" aria-labelledby="consent-heading">
+      <h3 id="consent-heading">{CONSENT_HEADING}</h3>
+      <ul>
+        {CONSENT_BULLETS.filter((b) => !b.aidOnly || hasAid).map((b) => (
+          <li key={b.key}>
+            <strong>{b.title}</strong> {b.text}
+          </li>
+        ))}
+        <li>
+          <strong>{CONSENT_CHOICES.title}</strong> {CONSENT_CHOICES.before}
+          <a href={`mailto:${CONSENT_CHOICES.email}`}>{CONSENT_CHOICES.email}</a>
+          {CONSENT_CHOICES.after}
+          <a href={CONSENT_CHOICES.linkUrl} target="_blank" rel="noopener noreferrer">
+            {CONSENT_CHOICES.linkText}
+          </a>
+          .
+        </li>
+      </ul>
     </section>
   );
 }

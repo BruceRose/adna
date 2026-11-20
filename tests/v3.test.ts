@@ -422,6 +422,11 @@ function responseRow(): ResponseRow {
       userAgentClass: "desktop",
     },
     pilotAnswers: null,
+    source: "web",
+    importBatchId: null,
+    consentSource: null,
+    consentVersion: "2026-11-20",
+    anonymisedAt: null,
   };
 }
 

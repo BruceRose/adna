@@ -1,8 +1,9 @@
 import "server-only";
-import { and, asc, count, desc, eq, ilike, isNotNull, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import { getDb, schema } from "./db";
 import type { NewResponse, ResponseMeta } from "./db/schema";
 import type { Preferences } from "./v3/items";
+import { retentionCutoff } from "./retention";
 
 const { responses } = schema;
 
@@ -142,4 +143,31 @@ export function filtersFromParams(p: Record<string, string | string[] | undefine
     wave: one("wave"),
     quality: quality === "flagged" || quality === "clean" ? quality : undefined,
   };
+}
+
+/* ---------- Retention ---------- */
+
+const expired = (now: Date) => and(lt(responses.createdAt, retentionCutoff(now)), isNull(responses.anonymisedAt));
+
+/** How many responses are past the retention period and still hold personal details. */
+export async function countExpiredResponses(now: Date = new Date()) {
+  const db = await getDb();
+  const [{ n }] = await db.select({ n: count() }).from(responses).where(expired(now));
+  return n;
+}
+
+/**
+ * Retention job: for responses older than RETENTION_MONTHS, delete the
+ * personal details (name, email, attendee reference and free text) and mark
+ * them anonymised. Industry and de-identified answers are kept, so audience
+ * reports and research still work. Returns the number of responses changed.
+ */
+export async function purgeExpiredResponses(now: Date = new Date()): Promise<number> {
+  const db = await getDb();
+  const rows = await db
+    .update(responses)
+    .set({ name: "", email: "", attendeeRef: null, freeText: null, anonymisedAt: now })
+    .where(expired(now))
+    .returning({ id: responses.id });
+  return rows.length;
 }

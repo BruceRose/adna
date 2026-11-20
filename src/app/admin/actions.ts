@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { checkPassword, createSession, destroySession, requireAdmin } from "@/lib/auth";
 import { createAudienceReport, deleteAudienceReport, resetShareToken } from "@/lib/reports";
-import { deleteResponse, filtersFromParams, idsMatching } from "@/lib/responses";
+import { deleteResponse, filtersFromParams, idsMatching, purgeExpiredResponses } from "@/lib/responses";
 
 export async function login(_prev: { error?: string }, formData: FormData): Promise<{ error?: string }> {
   const password = String(formData.get("password") ?? "");
@@ -17,6 +17,13 @@ export async function login(_prev: { error?: string }, formData: FormData): Prom
 export async function logout() {
   await destroySession();
   redirect("/admin/login");
+}
+
+/** Run the retention job now (admin banner). */
+export async function purgeNow() {
+  await requireAdmin();
+  await purgeExpiredResponses(new Date());
+  redirect("/admin");
 }
 
 export async function removeResponse(formData: FormData) {

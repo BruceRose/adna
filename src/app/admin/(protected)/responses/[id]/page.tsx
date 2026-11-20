@@ -54,7 +54,12 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
       <section className="card">
         <div className="admin-head">
           <div>
-            <h1>{row.name}</h1>
+            <h1>{row.anonymisedAt ? "Anonymised response" : row.name}</h1>
+            {row.anonymisedAt && (
+              <p className="notice subtle">
+                Personal details deleted under the retention policy on {formatDate(row.anonymisedAt)}.
+              </p>
+            )}
             <p className="muted">
               {row.email} · {industryLabel(row)}
               {row.event && <> · Event: {row.event}</>}
@@ -70,6 +75,8 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
         <dl className="meta">
           <Meta label="Submitted" value={formatDate(row.createdAt)} />
           <Meta label="Version / norms" value={`${row.questionnaireVersion} / ${row.normsVersion}`} />
+          <Meta label="Source" value={row.source === "import" ? `Import${row.consentSource ? `: ${row.consentSource}` : ""}` : "Web"} />
+          <Meta label="Consent version" value={row.consentVersion ?? "-"} />
           <Meta label="Role" value={labelFor(C2.options, row.context.role)} />
           <Meta label="Events in past 12 months" value={labelFor(C3.options, row.context.eventsAttended)} />
           <Meta label="Planning badge" value={row.badges.planning ? PLANNING_BADGES[row.badges.planning].label : "None"} />

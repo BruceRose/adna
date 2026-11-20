@@ -2,13 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import type { ResponseMeta } from "@/lib/db/schema";
 import { getResponse, insertResponse, isUuid, updateResponsePreferences } from "@/lib/responses";
-import { QUESTIONNAIRE_VERSION, type Preferences } from "@/lib/v3/items";
-import { scoreV3 } from "@/lib/v3/scoring";
+import { buildWebResponse } from "@/lib/v3/buildResponse";
+import type { Preferences } from "@/lib/v3/items";
 import {
   preferencesSchema,
-  sanitiseMeta,
   submissionSchema,
   type FieldErrorKey,
   type FieldErrors,
@@ -40,44 +38,9 @@ export async function submitResponse(input: Submission): Promise<SubmitResult> {
     };
   }
 
-  const { details, context, answers, pilotAnswers, preferences, freeText, event, wave, aid } = parsed.data;
-  const now = Date.now();
-  const clientMeta = sanitiseMeta(parsed.data.meta, now);
   const ua = (await headers()).get("user-agent") ?? "";
-  const meta: ResponseMeta = {
-    ...clientMeta,
-    submittedAt: new Date(now).toISOString(),
-    userAgentClass: /Mobi|Android|iPhone|iPad|iPod/i.test(ua) ? "mobile" : "desktop",
-  };
-
-  // Always score on the server, with the current questionnaire version.
-  const score = scoreV3(answers, preferences.P1, clientMeta);
-
   try {
-    const id = await insertResponse({
-      name: details.name,
-      email: details.email,
-      industry: context.industry,
-      industryOther: context.industry === "Other" ? (context.industryOther ?? null) : null,
-      event: event ?? null,
-      wave: wave ?? null,
-      attendeeRef: aid ?? null,
-      consentAt: new Date(now),
-      questionnaireVersion: QUESTIONNAIRE_VERSION,
-      normsVersion: score.normsVersion,
-      context: { role: context.role, eventsAttended: context.eventsAttended },
-      answers,
-      preferences: preferences as Preferences,
-      scaleScores: score.scaleScores,
-      axes: score.axes,
-      style: score.style,
-      styleNeighbour: score.styleNeighbour,
-      badges: score.badges,
-      qualityFlags: score.qualityFlags,
-      freeText: freeText ?? null,
-      meta,
-      pilotAnswers: pilotAnswers ?? null,
-    });
+    const id = await insertResponse(buildWebResponse(parsed.data, Date.now(), ua));
     return { ok: true, id };
   } catch (err) {
     console.error("Failed to save response", err);

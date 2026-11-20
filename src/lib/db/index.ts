@@ -33,7 +33,8 @@ async function connectPglite(): Promise<Db> {
   const { drizzle } = await import("drizzle-orm/pglite");
   const { migrate } = await import("drizzle-orm/pglite/migrator");
   const dataDir = process.env.PGLITE_DATA_DIR ?? path.join(process.cwd(), "data", "pglite");
-  mkdirSync(dataDir, { recursive: true });
+  // "memory://" gives an in-memory database (used by the tests).
+  if (!dataDir.startsWith("memory://")) mkdirSync(dataDir, { recursive: true });
   const db = drizzle(new PGlite(dataDir), { schema });
   await migrate(db, { migrationsFolder });
   return db;

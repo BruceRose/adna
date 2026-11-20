@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { SelectAll, SelectionBar } from "@/components/ReportTools";
 import { formatDate, industryLabel } from "@/lib/format";
-import { filtersFromParams, listEvents, listResponses, listWaves, styleCounts } from "@/lib/responses";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { RETENTION_MONTHS } from "@/lib/config";
+import { countExpiredResponses, filtersFromParams, listEvents, listResponses, listWaves, styleCounts } from "@/lib/responses";
 import { INDUSTRIES, OTHER_INDUSTRY } from "@/lib/v3/items";
 import { STYLES, STYLE_IDS } from "@/lib/v3/styles";
-import { createReport } from "../actions";
+import { createReport, purgeNow } from "../actions";
 
 const PAGE_SIZE = 50;
 
@@ -17,11 +19,12 @@ export default async function AdminResponses({
   const filters = filtersFromParams(params);
   const page = Math.max(1, Number(params.page) || 1);
 
-  const [{ rows, total }, counts, events, waves] = await Promise.all([
+  const [{ rows, total }, counts, events, waves, expired] = await Promise.all([
     listResponses(filters, page, PAGE_SIZE),
     styleCounts(filters),
     listEvents(),
     listWaves(),
+    countExpiredResponses(),
   ]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const maxCount = Math.max(1, ...counts.map((c) => c.n));
@@ -55,6 +58,21 @@ export default async function AdminResponses({
           </a>
         </div>
       </div>
+
+      {expired > 0 && (
+        <form action={purgeNow} className="notice retention-banner">
+          <span>
+            {expired} {expired === 1 ? "response is" : "responses are"} due to have personal details deleted under the{" "}
+            {RETENTION_MONTHS}-month retention policy.
+          </span>
+          <ConfirmButton
+            className="small"
+            message={`Delete the name, email, attendee reference and free text of ${expired} ${expired === 1 ? "response" : "responses"} now? Industry and de-identified answers are kept. This can't be undone.`}
+          >
+            Delete now
+          </ConfirmButton>
+        </form>
+      )}
 
       <form className="filters" method="get">
         <input name="q" placeholder="Search name or email" defaultValue={filters.q} aria-label="Search" />
@@ -156,7 +174,7 @@ export default async function AdminResponses({
                     </td>
                     <td className="nowrap">{formatDate(r.createdAt)}</td>
                     <td>
-                      <Link href={`/admin/responses/${r.id}`}>{r.name}</Link>
+                      <Link href={`/admin/responses/${r.id}`}>{r.anonymisedAt ? <em>Anonymised</em> : r.name}</Link>
                     </td>
                     <td>{r.email}</td>
                     <td>{industryLabel(r)}</td>

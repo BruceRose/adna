@@ -44,7 +44,7 @@ export default async function ResultsPage({ params }: Props) {
       <section className="card hero">
         <p className="eyebrow">Your event style</p>
         <h1 className="profile-name">
-          <span className="youre">{firstName}, you&apos;re</span>
+          <span className="youre">{firstName ? `${firstName}, you're` : "You're"}</span>
           {/^[AEIOU]/.test(style.name) ? "an" : "a"} {style.name}
         </h1>
         <p className="tagline">{style.tagline}</p>

@@ -3,6 +3,7 @@
  * questionnaire is enforced here too, on the server.
  */
 import { z } from "zod";
+import { CONSENT_ERROR } from "../consent";
 import {
   C2,
   C3,
@@ -28,7 +29,7 @@ const ids = <T extends { id: string }>(options: readonly T[]) => options.map((o)
 export const detailsSchema = z.object({
   name: z.string().trim().min(1, "Please enter your name").max(200),
   email: z.string().trim().toLowerCase().pipe(z.email("Please enter a valid email address")).pipe(z.string().max(320)),
-  consent: z.literal(true, { error: "Please confirm you're happy for us to store your answers" }),
+  consent: z.literal(true, { error: CONSENT_ERROR }),
 });
 
 /* ---------- Part 1 ---------- */

@@ -603,3 +603,23 @@ textarea {
 .p2-summary li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
 .p2-summary li:last-child { border-bottom: 0; }
 .p2-summary strong { font-weight: 700; white-space: nowrap; }
+
+/* v3.1 consent notice */
+.intro-consent { margin: -0.75rem 0 1.5rem; font-size: 0.95rem; }
+.consent-notice { padding: 16px 18px; border-radius: 16px; background: var(--accent-soft); }
+.consent-notice h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.consent-notice ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 8px; font-size: 0.92rem; line-height: 1.5; }
+.consent-notice a { overflow-wrap: anywhere; }
+button.primary[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+.retention-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
+
+/* Narrow screens and 200% zoom: let content shrink and wrap instead of overflowing. */
+.form > *, .report > *, .grid-2 > * { min-width: 0; }
+.nav { flex-wrap: wrap; gap: 8px; }
+@media (max-width: 360px) {
+  .container { padding-inline: 10px; }
+  .card { padding: 16px; }
+  .site-header { padding-inline: 10px; }
+  .consent-notice { padding: 12px; }
+  .consent-notice ul { padding-left: 0.9rem; }
+}
