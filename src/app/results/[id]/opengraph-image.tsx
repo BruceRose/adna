@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { logoDataUri } from "@/components/brand/Logo";
 import { getResponse } from "@/lib/responses";
 import { CONNECTING_ROWS, GRID, IDEAS_COLUMNS, STYLES } from "@/lib/v3/styles";
 
@@ -28,13 +29,8 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
-          <div style={{ display: "flex", alignItems: "center", fontSize: 34, fontWeight: 700 }}>
-            <div style={{ display: "flex", marginRight: 16 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 34, background: "#e2563f" }} />
-              <div style={{ width: 34, height: 34, borderRadius: 34, background: "#179583", marginLeft: -12 }} />
-            </div>
-            Audience&nbsp;<span style={{ color: "#6a4df4" }}>DNA</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logoDataUri()} width={204} height={100} alt="Audience DNA" />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 40, color: "#6d6478" }}>My event style</div>
             <div style={{ fontSize: 120, fontWeight: 800, lineHeight: 1.05 }}>{style?.name ?? "Audience DNA"}</div>

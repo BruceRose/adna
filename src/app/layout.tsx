@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { Logo } from "@/components/brand/Logo";
 import "@fontsource-variable/nunito";
 import "./globals.css";
 
@@ -15,12 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en-GB">
       <body>
         <header className="site-header">
-          <Link href="/" className="wordmark">
-            <span className="logo" aria-hidden>
-              <i />
-              <i />
-            </span>
-            Audience <span className="dna">DNA</span>
+          <Link href="/" className="site-logo" aria-label="Audience DNA home">
+            <Logo />
           </Link>
         </header>
         <main className="container">{children}</main>
