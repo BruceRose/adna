@@ -906,3 +906,6 @@ html[data-nav="back"]::view-transition-new(q-stage) { animation-name: enter-back
 .column-guide summary { cursor: pointer; }
 .column-guide code { font-size: 0.82rem; }
 .filter-chip { margin: 0 0 var(--space-3); }
+
+/* Headings inside forms (e.g. "About you"): no reserved height, just the form's normal gap. */
+.form > .statement { min-height: 0; margin-bottom: 0; }
