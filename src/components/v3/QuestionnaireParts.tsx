@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { TransitionLink } from "@/components/PageTransitions";
 import {
   CONSENT_BULLETS,
   CONSENT_CHOICES,
@@ -42,7 +42,7 @@ export function IntroScreen({ onStart }: { onStart: () => void }) {
         Let&apos;s go →
       </button>
       <p className="intro-styles-link">
-        <Link href="/styles">Curious first? Meet the nine styles</Link>
+        <TransitionLink href="/styles">Curious first? Meet the nine styles</TransitionLink>
       </p>
     </section>
   );

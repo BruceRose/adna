@@ -42,6 +42,7 @@ import {
   ResumePrompt,
   RevealScreen,
 } from "@/components/v3/QuestionnaireParts";
+import { navigateWithTransition } from "@/components/PageTransitions";
 import { submitResponse } from "./actions";
 
 interface Props {
@@ -311,7 +312,7 @@ export function Questionnaire({ seed: initialSeed, event, wave, aid, pilot }: Pr
     const navigateAt = reducedMotion
       ? elapsed
       : Math.min(Math.max(REVEAL_MIN_MS, elapsed + REVEAL_GLOW_MS), Math.max(REVEAL_MAX_MS, elapsed));
-    setTimeout(() => router.push(`/results/${res.id}`), Math.max(0, navigateAt - elapsed));
+    setTimeout(() => navigateWithTransition(() => router.push(`/results/${res.id}`)), Math.max(0, navigateAt - elapsed));
   }
 
   /* ---------- Rendering ---------- */

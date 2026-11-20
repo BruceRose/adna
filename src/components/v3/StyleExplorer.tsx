@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { TransitionLink, navigateWithTransition } from "@/components/PageTransitions";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { compareStyles } from "@/lib/v3/compare";
@@ -65,7 +65,7 @@ export function StyleExplorerGrid({
               const isYou = you === id;
               return (
                 <li key={id}>
-                  <Link
+                  <TransitionLink
                     ref={(el) => {
                       refs.current[index] = el;
                     }}
@@ -82,7 +82,7 @@ export function StyleExplorerGrid({
                       {" "}
                       ({LEVEL_NAMES.connecting[c]}, {LEVEL_NAMES.ideas[i]})
                     </span>
-                  </Link>
+                  </TransitionLink>
                 </li>
               );
             }),
@@ -170,19 +170,19 @@ export function StyleFooterCta() {
   const you = useYou();
   if (!you) {
     return (
-      <Link href="/" className="button primary-cta">
+      <TransitionLink href="/" className="button primary-cta">
         Discover your style
-      </Link>
+      </TransitionLink>
     );
   }
   return (
     <div className="cta-row">
-      <button type="button" className="primary" onClick={() => history.back()}>
+      <button type="button" className="primary" onClick={() => navigateWithTransition(() => history.back(), "back")}>
         Back to my results
       </button>
-      <Link href="/" className="small">
+      <TransitionLink href="/" className="small">
         Take the questionnaire again
-      </Link>
+      </TransitionLink>
     </div>
   );
 }

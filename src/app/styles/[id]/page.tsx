@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { TransitionLink } from "@/components/PageTransitions";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { HowCommon, StyleFooterCta, YouPanel } from "@/components/v3/StyleExplorer";
@@ -98,7 +98,7 @@ export default async function StylePage({ params }: Props) {
           <h2 className="section-title">Designing for {stylePlural(id)}</h2>
           <p>{s.design}</p>
           <p className="small">
-            <Link href="/styles">See how all nine styles fit together</Link>
+            <TransitionLink href="/styles">See how all nine styles fit together</TransitionLink>
           </p>
         </section>
       </div>
@@ -113,13 +113,13 @@ export default async function StylePage({ params }: Props) {
         <ul className="neighbours">
           {neighbouringStyles(id).map((n) => (
             <li key={n}>
-              <Link href={`/styles/${styleSlug(n)}`} className="neighbour">
+              <TransitionLink href={`/styles/${styleSlug(n)}`} className="neighbour">
                 <StyleEmblem style={n} size={48} />
                 <span>
                   <strong>{STYLES[n].name}</strong>
                   <span className="muted small">{STYLES[n].tagline}</span>
                 </span>
-              </Link>
+              </TransitionLink>
             </li>
           ))}
         </ul>
@@ -132,13 +132,13 @@ export default async function StylePage({ params }: Props) {
           <StyleFooterCta />
         </Suspense>
         <nav className="prev-next" aria-label="Other styles">
-          <Link href={`/styles/${styleSlug(prev)}`} rel="prev">
+          <TransitionLink href={`/styles/${styleSlug(prev)}`} rel="prev" direction="back">
             ← {STYLES[prev].name}
-          </Link>
-          <Link href="/styles">All styles</Link>
-          <Link href={`/styles/${styleSlug(next)}`} rel="next">
+          </TransitionLink>
+          <TransitionLink href="/styles">All styles</TransitionLink>
+          <TransitionLink href={`/styles/${styleSlug(next)}`} rel="next">
             {STYLES[next].name} →
-          </Link>
+          </TransitionLink>
         </nav>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { TransitionLink } from "@/components/PageTransitions";
 import { Suspense } from "react";
 import { StyleExplorerGrid, StyleExplorerGridFromUrl } from "@/components/v3/StyleExplorer";
 import { STYLES_INTRO, STYLES_AXES, STYLES_HOW_THEY_WORK } from "@/lib/v3/stylePageCopy";
@@ -41,7 +41,7 @@ export default function StylesPage() {
         <h2 className="section-title">How styles work</h2>
         <p>{STYLES_HOW_THEY_WORK}</p>
         <p>
-          <Link href="/">Discover your style</Link>
+          <TransitionLink href="/">Discover your style</TransitionLink>
         </p>
       </section>
     </div>

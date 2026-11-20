@@ -909,3 +909,17 @@ html[data-nav="back"]::view-transition-new(q-stage) { animation-name: enter-back
 
 /* Headings inside forms (e.g. "About you"): no reserved height, just the form's normal gap. */
 .form > .statement { min-height: 0; margin-bottom: 0; }
+/* ---------- Page transitions: swipe between pages (src/components/PageTransitions.tsx) ---------- */
+/* The main content swipes; the header and background (the root) stay still. */
+.container { view-transition-name: page; }
+html[data-vt="page"]::view-transition-group(page) { animation: none; }
+html[data-vt="page"]::view-transition-old(page) { animation: 380ms cubic-bezier(0.4, 0, 1, 1) both page-out-left; }
+html[data-vt="page"]::view-transition-new(page) { animation: 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both page-in-right; }
+html[data-vt="page"][data-nav="back"]::view-transition-old(page) { animation-name: page-out-right; }
+html[data-vt="page"][data-nav="back"]::view-transition-new(page) { animation-name: page-in-left; }
+@keyframes page-out-left { to { opacity: 0; transform: translateX(-100%); } }
+@keyframes page-in-right { from { opacity: 0; transform: translateX(100%); } }
+@keyframes page-out-right { to { opacity: 0; transform: translateX(100%); } }
+@keyframes page-in-left { from { opacity: 0; transform: translateX(-100%); } }
+/* Keep the swipe inside the viewport horizontally (no sideways scrollbar during the animation). */
+html[data-vt="page"] { overflow-x: clip; }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
+import { RouteChangeNotifier, TransitionLink } from "@/components/PageTransitions";
 import { Logo } from "@/components/brand/Logo";
 import { SITE_URL } from "@/lib/site";
 import "@fontsource-variable/nunito";
@@ -18,11 +19,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en-GB">
       <body>
         <header className="site-header">
-          <Link href="/" className="site-logo" aria-label="Audience DNA home">
+          <TransitionLink href="/" className="site-logo" aria-label="Audience DNA home" direction="back">
             <Logo />
-          </Link>
+          </TransitionLink>
         </header>
         <main className="container">{children}</main>
+        <Suspense fallback={null}>
+          <RouteChangeNotifier />
+        </Suspense>
       </body>
     </html>
   );
