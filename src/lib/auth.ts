@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
  * Minimal admin auth: one shared password (ADMIN_PASSWORD) and a signed,
  * http-only session cookie (signed with SESSION_SECRET).
  *
- * Intended as a first step — swap for SSO (e.g. Microsoft Entra ID) or
+ * Intended as a first step: swap for SSO (e.g. Microsoft Entra ID) or
  * per-user accounts when the admin area grows.
  */
 

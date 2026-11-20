@@ -1,20 +1,16 @@
 import { ImageResponse } from "next/og";
-import { PROFILES } from "@/lib/questionnaire";
 import { getResponse } from "@/lib/responses";
+import { CONNECTING_ROWS, GRID, IDEAS_COLUMNS, STYLES } from "@/lib/v3/styles";
 
-/** Preview card shown when a results link is shared (LinkedIn, Slack, Teams, WhatsApp…). No personal details. */
+/** Share preview: style name, tagline and grid position only. No personal details. */
 
-export const alt = "An Audience DNA profile";
+export const alt = "An Audience DNA event style";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const STRAND = ["#7b5cff", "#ef6a4c", "#e0901f", "#179583"];
-
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const row = await getResponse((await params).id);
-  const profile = PROFILES.find((p) => p.code === row?.code);
-  const name = profile?.name ?? "Audience DNA";
-  const article = /^[AEIOU]/.test(name) ? "an" : "a";
+  const style = row ? STYLES[row.style] : null;
 
   return new ImageResponse(
     (
@@ -23,7 +19,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
+          alignItems: "center",
           justifyContent: "space-between",
           padding: 72,
           background: "linear-gradient(135deg, #fff1e8 0%, #fff8f1 45%, #efeaff 100%)",
@@ -31,42 +27,41 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", fontSize: 34, fontWeight: 700 }}>
-          <div style={{ display: "flex", marginRight: 16 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 34, background: "#e2563f" }} />
-            <div style={{ width: 34, height: 34, borderRadius: 34, background: "#179583", marginLeft: -12 }} />
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", fontSize: 34, fontWeight: 700 }}>
+            <div style={{ display: "flex", marginRight: 16 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 34, background: "#e2563f" }} />
+              <div style={{ width: 34, height: 34, borderRadius: 34, background: "#179583", marginLeft: -12 }} />
+            </div>
+            Audience&nbsp;<span style={{ color: "#6a4df4" }}>DNA</span>
           </div>
-          Audience&nbsp;<span style={{ color: "#6a4df4" }}>DNA</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 40, color: "#6d6478" }}>{profile ? `I'm ${article}` : "Discover yours"}</div>
-          <div style={{ fontSize: 132, fontWeight: 800, lineHeight: 1.05 }}>{name}</div>
-          {profile && <div style={{ fontSize: 44, color: "#6a4df4", marginTop: 8 }}>{profile.tagline}</div>}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex" }}>
-            {(profile?.code ?? "????").split("").map((l, i) => (
-              <div
-                key={i}
-                style={{
-                  width: 76,
-                  height: 76,
-                  borderRadius: 76,
-                  marginRight: 14,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 38,
-                  fontWeight: 800,
-                  color: "white",
-                  background: STRAND[i],
-                }}
-              >
-                {l}
-              </div>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ fontSize: 40, color: "#6d6478" }}>My event style</div>
+            <div style={{ fontSize: 120, fontWeight: 800, lineHeight: 1.05 }}>{style?.name ?? "Audience DNA"}</div>
+            {style && <div style={{ fontSize: 42, color: "#6a4df4", marginTop: 8 }}>{style.tagline}</div>}
           </div>
-          <div style={{ fontSize: 32, color: "#6d6478" }}>What&apos;s your Audience DNA?</div>
+          <div style={{ fontSize: 30, color: "#6d6478" }}>What&apos;s your event style?</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {CONNECTING_ROWS.map((c) => (
+            <div key={c} style={{ display: "flex", gap: 10 }}>
+              {IDEAS_COLUMNS.map((i) => {
+                const you = row?.style === GRID[c][i];
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      width: 92,
+                      height: 92,
+                      borderRadius: 20,
+                      background: you ? "#6a4df4" : "rgba(106,77,244,0.12)",
+                      border: you ? "none" : "2px solid rgba(106,77,244,0.25)",
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ))}
         </div>
       </div>
     ),

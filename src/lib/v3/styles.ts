@@ -209,3 +209,7 @@ export function motivationLabel(ids: MotivationId[]): string | null {
   const second = a.startsWith("to ") && b.startsWith("to ") ? b.slice(3) : b;
   return `Here ${a} and ${second}`;
 }
+
+/** Results page note (spec 7.7). */
+export const ABOUT_YOUR_STYLE =
+  "Your style summarises how you described yourself today. Most people sit near the middle on at least one axis, and your style can shift with context. Use it as a starting point for conversation, not a fixed label.";

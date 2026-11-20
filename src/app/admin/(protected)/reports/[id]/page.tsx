@@ -4,7 +4,8 @@ import { AudienceReportView } from "@/components/AudienceReportView";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyLinkButton, PrintButton } from "@/components/ReportTools";
 import { formatDate, industryLabel } from "@/lib/format";
-import { buildAudienceReport } from "@/lib/insights";
+import { buildAudienceReport } from "@/lib/v3/audience";
+import { STYLES } from "@/lib/v3/styles";
 import { getAudienceReport, reportMembers } from "@/lib/reports";
 import { removeReport, resetReportLink } from "../../../actions";
 
@@ -14,7 +15,16 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   if (!saved) notFound();
 
   const members = await reportMembers(saved.responseIds);
-  const report = buildAudienceReport(members.map((m) => ({ scores: m.scores, version: m.questionnaireVersion })));
+  const report = buildAudienceReport(
+    members.map((m) => ({
+      axes: m.axes,
+      style: m.style,
+      badges: m.badges,
+      preferences: m.preferences,
+      qualityFlags: m.qualityFlags,
+      version: m.questionnaireVersion,
+    })),
+  );
   const missing = saved.responseIds.length - members.length;
   const clientPath = `/r/${saved.shareToken}`;
 
@@ -54,11 +64,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         </p>
       )}
 
-      {report ? (
-        <AudienceReportView report={report} title={saved.name} note={saved.note} meta={`Created ${formatDate(saved.createdAt)}`} />
-      ) : (
-        <p className="card muted">Everyone in this report has since been deleted.</p>
-      )}
+      <AudienceReportView report={report} title={saved.name} note={saved.note} meta={`Created ${formatDate(saved.createdAt)}`} />
 
       {members.length > 0 && (
         <details className="card members no-print">
@@ -73,7 +79,8 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                   <th>Name</th>
                   <th>Email</th>
                   <th>Industry</th>
-                  <th>Profile</th>
+                  <th>Style</th>
+                  <th>Quality</th>
                 </tr>
               </thead>
               <tbody>
@@ -84,9 +91,8 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                     </td>
                     <td>{m.email}</td>
                     <td>{industryLabel(m)}</td>
-                    <td className="nowrap">
-                      {m.profile} <span className="muted">{m.code}</span>
-                    </td>
+                    <td className="nowrap">{STYLES[m.style].name}</td>
+                    <td>{m.qualityFlags.length ? <span className="flag">{m.qualityFlags.join(", ")}</span> : <span className="muted">Clean</span>}</td>
                   </tr>
                 ))}
               </tbody>

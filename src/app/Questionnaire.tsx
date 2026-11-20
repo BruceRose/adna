@@ -1,274 +1,418 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { INDUSTRIES, OTHER_INDUSTRY, SCALE_ENDS, SCALE_VALUES, STATEMENTS } from "@/lib/questionnaire";
-import type { FieldErrors } from "@/lib/validation";
+import { DETAILS_POSITION } from "@/lib/config";
+import {
+  C1_QUESTION,
+  C2,
+  C3,
+  FREE_TEXT,
+  INDUSTRIES,
+  INTRO,
+  LIKE_ME_SCALE,
+  OTHER_INDUSTRY,
+  PART2_INSTRUCTION,
+  PILOT_INSTRUCTION,
+  PILOT_ITEMS,
+  SECTION_LABELS,
+  TRAIT_ITEMS,
+  p2RowOrder,
+  presentationOrder,
+  type Preferences,
+} from "@/lib/v3/items";
+import type { FieldErrors } from "@/lib/v3/validation";
+import {
+  AUTO_ADVANCE,
+  EMPTY_DRAFT,
+  PREF_KEYS,
+  PreferenceQuestion,
+  isAnswered,
+  type DraftPreferences,
+  type PrefKey,
+} from "@/components/v3/PreferenceInputs";
 import { submitResponse } from "./actions";
 
-type Step = "details" | number;
+type Step =
+  | { kind: "intro" }
+  | { kind: "details" }
+  | { kind: "part1" }
+  | { kind: "trait"; id: string; index: number }
+  | { kind: "pilot"; id: string; index: number }
+  | { kind: "pref"; key: PrefKey }
+  | { kind: "freeText" };
 
-interface DetailsState {
-  name: string;
-  email: string;
-  industry: string;
-  industryOther: string;
-  consent: boolean;
+interface Props {
+  seed: number;
+  event?: string;
+  wave?: string;
+  aid?: string;
+  pilot: boolean;
 }
 
-const EMPTY: DetailsState = { name: "", email: "", industry: "", industryOther: "", consent: false };
 const ADVANCE_DELAY_MS = 220;
+const now = () => new Date().toISOString();
 
-export function Questionnaire({ event }: { event?: string }) {
+export function Questionnaire({ seed, event, wave, aid, pilot }: Props) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("details");
-  const [details, setDetails] = useState<DetailsState>(EMPTY);
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const order = useMemo(() => presentationOrder(seed), [seed]);
+  const p2Order = useMemo(() => p2RowOrder(seed), [seed]);
 
-  const total = STATEMENTS.length;
-  const answeredCount = Object.keys(answers).length;
-  const allAnswered = answeredCount === total;
+  const steps = useMemo<Step[]>(() => {
+    const s: Step[] = [{ kind: "intro" }];
+    if (DETAILS_POSITION === "start") s.push({ kind: "details" });
+    s.push({ kind: "part1" });
+    order.forEach((id, index) => s.push({ kind: "trait", id, index }));
+    if (pilot) PILOT_ITEMS.forEach((item, index) => s.push({ kind: "pilot", id: item.id, index }));
+    PREF_KEYS.forEach((key) => s.push({ kind: "pref", key }));
+    s.push({ kind: "freeText" });
+    if (DETAILS_POSITION === "end") s.push({ kind: "details" });
+    return s;
+  }, [order, pilot]);
 
-  const update = <K extends keyof DetailsState>(key: K, value: DetailsState[K]) => {
-    setDetails((d) => ({ ...d, [key]: value }));
-    setErrors((e) => ({ ...e, [key]: undefined }));
-  };
-
-  function validateDetails(): FieldErrors {
-    const e: FieldErrors = {};
-    if (!details.name.trim()) e.name = "Please enter your name";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email.trim())) e.email = "Please enter a valid email address";
-    if (!details.industry) e.industry = "Please choose your industry";
-    if (details.industry === OTHER_INDUSTRY && !details.industryOther.trim())
-      e.industryOther = "Please tell us your industry";
-    if (!details.consent) e.consent = "Please confirm you're happy for us to store your answers";
-    return e;
-  }
-
-  function startQuestions(ev: React.FormEvent) {
-    ev.preventDefault();
-    const e = validateDetails();
-    setErrors(e);
-    if (Object.keys(e).length === 0) setStep(0);
-  }
-
-  const choose = useCallback(
-    (index: number, value: number) => {
-      const id = STATEMENTS[index].id;
-      setAnswers((a) => ({ ...a, [id]: value }));
-      setFormError(null);
-      if (advanceTimer.current) clearTimeout(advanceTimer.current);
-      if (index < total - 1) {
-        advanceTimer.current = setTimeout(() => setStep(index + 1), ADVANCE_DELAY_MS);
-      }
-    },
-    [total],
+  // Steps that count towards the progress bar (Parts 1-3).
+  const progressSteps = useMemo(
+    () => steps.map((s, i) => ({ s, i })).filter(({ s }) => ["part1", "trait", "pilot", "pref"].includes(s.kind)),
+    [steps],
   );
 
-  const goBack = useCallback(() => {
-    if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    setStep((s) => (s === "details" || s === 0 ? "details" : s - 1));
-  }, []);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [details, setDetails] = useState({ name: "", email: "", consent: false });
+  const [context, setContext] = useState({ industry: "", industryOther: "", role: "", eventsAttended: "" });
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [pilotAnswers, setPilotAnswers] = useState<Record<string, number>>({});
+  const [prefs, setPrefs] = useState<DraftPreferences>(EMPTY_DRAFT);
+  const [freeText, setFreeText] = useState("");
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const timings = useRef<{ startedAt?: string; part2StartedAt?: string; part2EndedAt?: string }>({});
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keyboard shortcuts on question screens: 1–6 to answer, ← to go back, → to go forward if answered.
+  const step = steps[stepIndex];
+  const isLast = stepIndex === steps.length - 1;
+
+  // Timings: first question shown, and the start of Part 2.
   useEffect(() => {
-    if (typeof step !== "number") return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const n = Number(e.key);
-      if (n >= 1 && n <= 6) choose(step, n);
-      else if (e.key === "ArrowLeft") goBack();
-      else if (e.key === "ArrowRight" && answers[STATEMENTS[step].id] && step < total - 1) setStep(step + 1);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [step, answers, choose, goBack, total]);
+    if (step.kind === "part1") timings.current.startedAt ??= now();
+    if (step.kind === "trait") timings.current.part2StartedAt ??= now();
+  }, [step]);
 
   useEffect(() => () => {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
   }, []);
 
+  const goTo = useCallback((i: number) => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    setStepIndex(Math.max(0, Math.min(i, steps.length - 1)));
+    setFormError(null);
+    window.scrollTo({ top: 0 });
+  }, [steps.length]);
+
+  const next = useCallback(() => goTo(stepIndex + 1), [goTo, stepIndex]);
+  const back = useCallback(() => goTo(stepIndex - 1), [goTo, stepIndex]);
+  const advanceSoon = useCallback(() => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(() => setStepIndex((i) => Math.min(i + 1, steps.length - 1)), ADVANCE_DELAY_MS);
+  }, [steps.length]);
+
+  const answerLikeMe = useCallback(
+    (value: number) => {
+      if (step.kind === "trait") {
+        setAnswers((a) => ({ ...a, [step.id]: value }));
+        if (step.index === order.length - 1) timings.current.part2EndedAt = now();
+      } else if (step.kind === "pilot") {
+        setPilotAnswers((a) => ({ ...a, [step.id]: value }));
+      } else return;
+      if (!isLast) advanceSoon();
+    },
+    [step, order.length, isLast, advanceSoon],
+  );
+
+  // Keyboard: 1-5 answers Part 2 statements, left arrow goes back.
+  useEffect(() => {
+    if (step.kind !== "trait" && step.kind !== "pilot") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const n = Number(e.key);
+      if (n >= 1 && n <= 5) answerLikeMe(n);
+      else if (e.key === "ArrowLeft") back();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [step, answerLikeMe, back]);
+
+  /* ---------- Validation for the form screens ---------- */
+
+  function validateDetails(): FieldErrors {
+    const e: FieldErrors = {};
+    if (!details.name.trim()) e.name = "Please enter your name";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email.trim())) e.email = "Please enter a valid email address";
+    if (!details.consent) e.consent = "Please confirm you're happy for us to store your answers";
+    return e;
+  }
+
+  function validateContext(): FieldErrors {
+    const e: FieldErrors = {};
+    if (!context.industry) e.industry = "Please choose your industry";
+    if (context.industry === OTHER_INDUSTRY && !context.industryOther.trim()) e.industryOther = "Please tell us your industry";
+    if (!context.role) e.role = "Please choose your role";
+    if (!context.eventsAttended) e.eventsAttended = "Please choose an answer";
+    return e;
+  }
+
+  function continueFrom(validate: () => FieldErrors) {
+    const e = validate();
+    setErrors(e);
+    if (Object.keys(e).length) return;
+    if (isLast) submit();
+    else next();
+  }
+
+  /* ---------- Submit ---------- */
+
   function submit() {
     setFormError(null);
+    const presentedOrder = [...order, ...p2Order.map((r) => `P2.${r}`)];
     startTransition(async () => {
       const res = await submitResponse({
-        details: {
-          name: details.name,
-          email: details.email,
-          industry: details.industry as never,
-          industryOther: details.industryOther || undefined,
-          consent: details.consent as true,
+        details: { name: details.name, email: details.email, consent: details.consent as true },
+        context: {
+          industry: context.industry as never,
+          industryOther: context.industryOther || undefined,
+          role: context.role as never,
+          eventsAttended: context.eventsAttended as never,
         },
         answers,
+        pilotAnswers: pilot ? pilotAnswers : undefined,
+        preferences: prefs as unknown as Preferences,
+        freeText: freeText || undefined,
+        meta: { presentedOrder, ...timings.current },
         event,
+        wave,
+        aid,
       });
       if (res.ok) {
         router.push(`/results/${res.id}`);
-      } else {
-        setFormError(res.message);
-        if (res.fieldErrors && Object.keys(res.fieldErrors).length) {
-          setErrors(res.fieldErrors);
-          setStep("details");
-        }
+        return;
+      }
+      setFormError(res.message);
+      if (res.fieldErrors && Object.keys(res.fieldErrors).length) {
+        setErrors(res.fieldErrors);
+        const detailsKeys = ["name", "email", "consent"];
+        const target = Object.keys(res.fieldErrors).some((k) => detailsKeys.includes(k)) ? "details" : "part1";
+        goTo(steps.findIndex((s) => s.kind === target));
       }
     });
   }
 
-  if (step === "details") {
+  /* ---------- Rendering ---------- */
+
+  const progressPos = progressSteps.findIndex(({ i }) => i === stepIndex);
+  const progress =
+    progressPos >= 0
+      ? progressPos / progressSteps.length
+      : stepIndex > (progressSteps.at(-1)?.i ?? 0)
+        ? 1
+        : 0;
+
+  const sectionLabel =
+    step.kind === "part1"
+      ? SECTION_LABELS.part1
+      : step.kind === "trait" || step.kind === "pilot"
+        ? SECTION_LABELS.part2
+        : step.kind === "pref"
+          ? SECTION_LABELS.part3
+          : null;
+
+  const submitLabel = pending ? "Working out your event style…" : "See my event style";
+
+  if (step.kind === "intro") {
     return (
-      <section className="card">
-        <h1>Discover your Audience DNA</h1>
-        <p className="lede">
-          {total} quick statements, about {Math.max(2, Math.round(total / 5))} minutes. There are no right or wrong
-          answers, so just go with your gut. At the end you&apos;ll discover your profile and how you like to connect.
-        </p>
-        <form onSubmit={startQuestions} noValidate className="form">
-          <Field label="Your name" error={errors.name} htmlFor="name">
-            <input
-              id="name"
-              autoComplete="name"
-              value={details.name}
-              onChange={(e) => update("name", e.target.value)}
-              aria-invalid={!!errors.name}
-            />
-          </Field>
-          <Field label="Your email" error={errors.email} htmlFor="email">
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={details.email}
-              onChange={(e) => update("email", e.target.value)}
-              aria-invalid={!!errors.email}
-            />
-          </Field>
-          <Field label="Your industry" error={errors.industry} htmlFor="industry">
-            <select
-              id="industry"
-              value={details.industry}
-              onChange={(e) => update("industry", e.target.value)}
-              aria-invalid={!!errors.industry}
-            >
-              <option value="" disabled>
-                Choose your industry…
-              </option>
-              {INDUSTRIES.map((i) => (
-                <option key={i}>{i}</option>
-              ))}
-              <option>{OTHER_INDUSTRY}</option>
-            </select>
-          </Field>
-          {details.industry === OTHER_INDUSTRY && (
-            <Field label="Your industry" error={errors.industryOther} htmlFor="industryOther">
-              <input
-                id="industryOther"
-                value={details.industryOther}
-                onChange={(e) => update("industryOther", e.target.value)}
-                aria-invalid={!!errors.industryOther}
-                autoFocus
-              />
-            </Field>
-          )}
-          <div className="field">
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={details.consent}
-                onChange={(e) => update("consent", e.target.checked)}
-                aria-invalid={!!errors.consent}
-              />
-              <span>I&apos;m happy for my details and answers to be stored so my Audience DNA profile can be created.</span>
-            </label>
-            {errors.consent && <p className="error">{errors.consent}</p>}
-          </div>
-          {formError && <p className="error banner">{formError}</p>}
-          <button type="submit" className="primary">
-            {answeredCount > 0 ? "Carry on →" : "Let's go →"}
-          </button>
-        </form>
+      <section className="card intro">
+        <h1>{INTRO.title}</h1>
+        <p className="lede">{INTRO.body}</p>
+        <button type="button" className="primary" onClick={next}>
+          Let&apos;s go →
+        </button>
       </section>
     );
   }
 
-  const statement = STATEMENTS[step];
-  const current = answers[statement.id];
-  const isLast = step === total - 1;
-
   return (
     <section className="card question">
-      <div className="progress" aria-hidden>
-        <div className="progress-fill" style={{ width: `${(answeredCount / total) * 100}%` }} />
-      </div>
-      <div key={step} className="slide-in">
-        <p className="eyebrow">
-          Statement {step + 1} of {total}
-          {cheer(step, total) && <span className="cheer">{cheer(step, total)}</span>}
-        </p>
-        <h2 className="statement" id="statement">
-          {statement.text}
-        </h2>
-        <div className="scale-wrap">
-          <span className="scale-end disagree" aria-hidden>
-            {SCALE_ENDS.min}
-          </span>
-          <div className="scale" role="radiogroup" aria-labelledby="statement">
-            {SCALE_VALUES.map((v) => (
-              <button
-                key={v}
-                type="button"
-                role="radio"
-                aria-checked={current === v}
-                aria-label={
-                  v === 1 ? `1 of 6, ${SCALE_ENDS.min}` : v === 6 ? `6 of 6, ${SCALE_ENDS.max}` : `${v} of 6`
-                }
-                className={`dot dot-${v}${current === v ? " selected" : ""}`}
-                onClick={() => choose(step, v)}
-              />
-            ))}
-          </div>
-          <span className="scale-end agree" aria-hidden>
-            {SCALE_ENDS.max}
-          </span>
+      {progressPos >= 0 || step.kind === "freeText" ? (
+        <div className="progress" aria-hidden>
+          <div className="progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
         </div>
-      </div>
-      <div className="nav">
-        <button type="button" className="ghost" onClick={goBack}>
-          ← Back
-        </button>
-        {isLast ? (
-          <button type="button" className="primary" disabled={!allAnswered || pending} onClick={submit}>
-            {pending ? "Working out your profile…" : "Reveal my profile →"}
-          </button>
-        ) : (
-          current && (
-            <button type="button" className="ghost" onClick={() => setStep(step + 1)}>
-              Next →
-            </button>
-          )
+      ) : null}
+      {sectionLabel && <p className="eyebrow">{sectionLabel}</p>}
+
+      <div key={stepIndex} className="slide-in">
+        {step.kind === "details" && (
+          <form
+            className="form"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              continueFrom(validateDetails);
+            }}
+          >
+            <h2 className="statement">About you</h2>
+            <Field label="Your name" error={errors.name} htmlFor="name">
+              <input id="name" autoComplete="name" value={details.name} aria-invalid={!!errors.name}
+                onChange={(e) => setDetails({ ...details, name: e.target.value })} />
+            </Field>
+            <Field label="Your email" error={errors.email} htmlFor="email">
+              <input id="email" type="email" autoComplete="email" value={details.email} aria-invalid={!!errors.email}
+                onChange={(e) => setDetails({ ...details, email: e.target.value })} />
+            </Field>
+            <div className="field">
+              <label className="checkbox">
+                <input type="checkbox" checked={details.consent} aria-invalid={!!errors.consent}
+                  onChange={(e) => setDetails({ ...details, consent: e.target.checked })} />
+                <span>I&apos;m happy for my details and answers to be stored so my Audience DNA profile can be created.</span>
+              </label>
+              {errors.consent && <p className="error">{errors.consent}</p>}
+            </div>
+            {formError && <p className="error banner">{formError}</p>}
+            <div className="nav">
+              <button type="button" className="ghost" onClick={back}>← Back</button>
+              <button type="submit" className="primary" disabled={pending}>{isLast ? submitLabel : "Continue →"}</button>
+            </div>
+          </form>
+        )}
+
+        {step.kind === "part1" && (
+          <form
+            className="form"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              continueFrom(validateContext);
+            }}
+          >
+            <Field label={C1_QUESTION} error={errors.industry} htmlFor="industry">
+              <select id="industry" value={context.industry} aria-invalid={!!errors.industry}
+                onChange={(e) => setContext({ ...context, industry: e.target.value })}>
+                <option value="" disabled>Choose your industry…</option>
+                {INDUSTRIES.map((i) => <option key={i}>{i}</option>)}
+                <option>{OTHER_INDUSTRY}</option>
+              </select>
+            </Field>
+            {context.industry === OTHER_INDUSTRY && (
+              <Field label="Your industry" error={errors.industryOther} htmlFor="industryOther">
+                <input id="industryOther" value={context.industryOther} aria-invalid={!!errors.industryOther}
+                  onChange={(e) => setContext({ ...context, industryOther: e.target.value })} />
+              </Field>
+            )}
+            <RadioField name="role" legend={C2.question} options={C2.options} value={context.role} error={errors.role}
+              onChange={(role) => setContext({ ...context, role })} />
+            <RadioField name="eventsAttended" legend={C3.question} options={C3.options} value={context.eventsAttended}
+              error={errors.eventsAttended} onChange={(eventsAttended) => setContext({ ...context, eventsAttended })} />
+            {formError && <p className="error banner">{formError}</p>}
+            <div className="nav">
+              <button type="button" className="ghost" onClick={back}>← Back</button>
+              <button type="submit" className="primary">Continue →</button>
+            </div>
+          </form>
+        )}
+
+        {(step.kind === "trait" || step.kind === "pilot") && (
+          <LikeMeQuestion
+            step={step}
+            value={step.kind === "trait" ? answers[step.id] : pilotAnswers[step.id]}
+            onAnswer={answerLikeMe}
+            onBack={back}
+            onNext={next}
+          />
+        )}
+
+        {step.kind === "pref" && (
+          <>
+            <PreferenceQuestion
+              qkey={step.key}
+              draft={prefs}
+              onChange={setPrefs}
+              p2Order={p2Order}
+              onAnswered={AUTO_ADVANCE.includes(step.key) ? advanceSoon : undefined}
+            />
+            <div className="nav">
+              <button type="button" className="ghost" onClick={back}>← Back</button>
+              <button type="button" className="primary" disabled={!isAnswered(step.key, prefs)} onClick={next}>
+                Next →
+              </button>
+            </div>
+          </>
+        )}
+
+        {step.kind === "freeText" && (
+          <div className="form">
+            <label htmlFor="freeText" className="statement">{FREE_TEXT.question}</label>
+            <p className="muted small" id="freeText-help">{FREE_TEXT.helper}</p>
+            <textarea id="freeText" rows={5} maxLength={FREE_TEXT.maxLength} value={freeText} aria-describedby="freeText-help"
+              onChange={(e) => setFreeText(e.target.value)} placeholder="Optional" />
+            <p className="muted small right">{freeText.length} / {FREE_TEXT.maxLength}</p>
+            {formError && <p className="error banner">{formError}</p>}
+            <div className="nav">
+              <button type="button" className="ghost" onClick={back}>← Back</button>
+              <button type="button" className="primary" disabled={pending} onClick={() => (isLast ? submit() : next())}>
+                {isLast ? submitLabel : freeText.trim() ? "Continue →" : "Skip →"}
+              </button>
+            </div>
+          </div>
         )}
       </div>
-      {isLast && !allAnswered && current && (
-        <p className="error">
-          You&apos;ve skipped {total - answeredCount} statement{total - answeredCount === 1 ? "" : "s"}. Go back to
-          answer {total - answeredCount === 1 ? "it" : "them"}.
-        </p>
-      )}
-      {formError && <p className="error banner">{formError}</p>}
-      <p className="hint">Tip: you can press 1–6 on your keyboard to answer.</p>
     </section>
   );
 }
 
-/** A little encouragement at a few points along the way. */
-function cheer(step: number, total: number): string | null {
-  if (step === 0) return "Go with your first instinct";
-  if (step === Math.floor(total / 2)) return "Halfway there!";
-  if (step === total - 1) return "Last one!";
-  return null;
+function LikeMeQuestion({
+  step,
+  value,
+  onAnswer,
+  onBack,
+  onNext,
+}: {
+  step: { kind: "trait" | "pilot"; id: string; index: number };
+  value: number | undefined;
+  onAnswer: (v: number) => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  const isPilot = step.kind === "pilot";
+  const text = isPilot ? PILOT_ITEMS.find((i) => i.id === step.id)!.text : TRAIT_ITEMS.find((i) => i.id === step.id)!.text;
+  const instruction = isPilot ? PILOT_INSTRUCTION : PART2_INSTRUCTION;
+  const first = step.index === 0;
+
+  return (
+    <>
+      {first ? <p className="instruction">{instruction}</p> : <p className="instruction-small">{instruction}</p>}
+      <h2 className="statement" id="statement">{text}</h2>
+      <div className="likeme" role="radiogroup" aria-labelledby="statement">
+        {LIKE_ME_SCALE.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            role="radio"
+            aria-checked={value === s.value}
+            className={`likeme-option${value === s.value ? " selected" : ""}`}
+            onClick={() => onAnswer(s.value)}
+          >
+            <span className="likeme-num" aria-hidden>{s.value}</span>
+            <span className="likeme-label">{s.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="nav">
+        <button type="button" className="ghost" onClick={onBack}>← Back</button>
+        {value !== undefined && (
+          <button type="button" className="ghost" onClick={onNext}>Next →</button>
+        )}
+      </div>
+      <p className="hint">Tip: you can press 1-5 on your keyboard to answer.</p>
+    </>
+  );
 }
 
 function Field(props: { label: string; htmlFor: string; error?: string; children: React.ReactNode }) {
@@ -278,5 +422,36 @@ function Field(props: { label: string; htmlFor: string; error?: string; children
       {props.children}
       {props.error && <p className="error">{props.error}</p>}
     </div>
+  );
+}
+
+function RadioField({
+  name,
+  legend,
+  options,
+  value,
+  error,
+  onChange,
+}: {
+  name: string;
+  legend: string;
+  options: readonly { id: string; label: string }[];
+  value: string;
+  error?: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <fieldset className="field radio-field" aria-invalid={!!error}>
+      <legend>{legend}</legend>
+      <div className="choices compact">
+        {options.map((o) => (
+          <label key={o.id} className={`choice radio${value === o.id ? " checked" : ""}`}>
+            <input type="radio" name={name} checked={value === o.id} onChange={() => onChange(o.id)} />
+            <span>{o.label}</span>
+          </label>
+        ))}
+      </div>
+      {error && <p className="error">{error}</p>}
+    </fieldset>
   );
 }

@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { desc, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "./db";
+import { AUDIENCE_FIELDS } from "./responses";
 
 const { audienceReports, responses } = schema;
 
@@ -60,11 +61,8 @@ export async function reportMembers(ids: string[]) {
 }
 
 /** Only what the report needs: no names or emails. Used for client links. */
-export async function reportScores(ids: string[]) {
+export async function reportRows(ids: string[]) {
   if (ids.length === 0) return [];
   const db = await getDb();
-  return db
-    .select({ scores: responses.scores, version: responses.questionnaireVersion })
-    .from(responses)
-    .where(inArray(responses.id, ids));
+  return db.select(AUDIENCE_FIELDS).from(responses).where(inArray(responses.id, ids));
 }

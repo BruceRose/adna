@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { AudienceReportView } from "@/components/AudienceReportView";
-import { buildAudienceReport } from "@/lib/insights";
-import { INDUSTRIES, OTHER_INDUSTRY } from "@/lib/questionnaire";
+import { buildAudienceReport } from "@/lib/v3/audience";
+import { INDUSTRIES, OTHER_INDUSTRY } from "@/lib/v3/items";
 import { audienceRows, filtersFromParams, listEvents } from "@/lib/responses";
 import { createReport } from "../../actions";
 
@@ -36,8 +36,8 @@ export default async function InsightsPage({
         <select name="event" defaultValue={event ?? ""} aria-label="Event">
           <option value="">All events</option>
           {events.map((e) => (
-            <option key={e.event} value={e.event!}>
-              {e.event} ({e.n})
+            <option key={e.value} value={e.value}>
+              {e.value} ({e.n})
             </option>
           ))}
         </select>
@@ -55,7 +55,7 @@ export default async function InsightsPage({
         )}
       </form>
 
-      {report && (
+      {rows.length > 0 && (
         <form action={createReport} className="save-slice card">
           <input type="hidden" name="scope" value="all" />
           {event && <input type="hidden" name="event" value={event} />}
@@ -63,7 +63,7 @@ export default async function InsightsPage({
           <div>
             <strong>Save this audience as a report</strong>
             <p className="muted small">
-              Freezes these {report.total} people into a named report with a shareable client link.
+              Freezes these {rows.length} people into a named report with a shareable client link.
             </p>
           </div>
           <input name="name" defaultValue={`${sliceName} audience`} aria-label="Report name" maxLength={120} />
@@ -71,7 +71,7 @@ export default async function InsightsPage({
         </form>
       )}
 
-      {report ? (
+      {rows.length > 0 ? (
         <AudienceReportView report={report} title={sliceName} meta="Live view" />
       ) : (
         <p className="card muted">No responses yet{event || industry ? " for this selection" : ""}.</p>

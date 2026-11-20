@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AudienceReportView } from "@/components/AudienceReportView";
 import { PrintButton } from "@/components/ReportTools";
-import { buildAudienceReport } from "@/lib/insights";
-import { getAudienceReportByToken, reportScores } from "@/lib/reports";
+import { buildAudienceReport } from "@/lib/v3/audience";
+import { getAudienceReportByToken, reportRows } from "@/lib/reports";
 
 /**
  * Read-only client view of an audience report. Anyone with the link can
@@ -26,14 +26,17 @@ export default async function ClientReportPage({ params }: Props) {
   const saved = await getAudienceReportByToken((await params).token);
   if (!saved) notFound();
 
-  const report = buildAudienceReport(await reportScores(saved.responseIds));
-  if (!report) notFound();
+  // The minimum audience size is enforced here on the server: a too-small
+  // report renders only the "too small" message, with no statistics.
+  const report = buildAudienceReport(await reportRows(saved.responseIds));
 
   return (
     <div className="client-report">
-      <div className="report-actions no-print">
-        <PrintButton />
-      </div>
+      {report.state === "ok" && (
+        <div className="report-actions no-print">
+          <PrintButton />
+        </div>
+      )}
       <AudienceReportView
         report={report}
         title={saved.name}
