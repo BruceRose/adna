@@ -4,10 +4,13 @@ import { ShareButton } from "@/components/ShareButton";
 import { Continuum } from "@/components/v3/Continuum";
 import { PreferencesPanel } from "@/components/v3/PreferencesPanel";
 import { StyleGrid } from "@/components/v3/StyleGrid";
+import { StyleEmblem } from "@/components/v3/StyleEmblem";
+import { StyleExplorerGrid } from "@/components/v3/StyleExplorer";
+import Link from "next/link";
 import { getResponse } from "@/lib/responses";
 import { P2_ROW_IDS, type P2RowId } from "@/lib/v3/items";
 import { buildRecommendations } from "@/lib/v3/recommendations";
-import { ABOUT_YOUR_STYLE, PLANNING_BADGES, STYLES, motivationLabel } from "@/lib/v3/styles";
+import { ABOUT_YOUR_STYLE, PLANNING_BADGES, STYLES, motivationLabel, styleSlug } from "@/lib/v3/styles";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +44,8 @@ export default async function ResultsPage({ params }: Props) {
 
   return (
     <div className="report">
-      <section className="card hero">
+      <section className="card hero results-hero">
+        <StyleEmblem style={row.style} size={160} animate />
         <p className="eyebrow">Your event style</p>
         <h1 className="profile-name">
           <span className="youre">{firstName ? `${firstName}, you're` : "You're"}</span>
@@ -56,7 +60,11 @@ export default async function ResultsPage({ params }: Props) {
         <p className="profile-desc">{style.description}</p>
         {neighbour && (
           <p className="neighbour-line">
-            With a touch of <strong>{neighbour.name}</strong>: {neighbour.tagline}
+            With a touch of{" "}
+            <Link href={`/styles/${styleSlug(neighbour.id)}?you=${row.style}`}>
+              <strong>{neighbour.name}</strong>
+            </Link>
+            : {neighbour.tagline}
           </p>
         )}
         {(planning || motivation) && (
@@ -137,6 +145,15 @@ export default async function ResultsPage({ params }: Props) {
             </div>
           )}
         </div>
+      </section>
+
+      <section className="card explore">
+        <h2 className="section-title">Explore the other styles</h2>
+        <p className="muted">See what each style gets from events, and how it compares with yours.</p>
+        <StyleExplorerGrid you={row.style} compact />
+        <p>
+          <Link href={`/styles?you=${row.style}`}>See all nine styles</Link>
+        </p>
       </section>
 
       <section className="card">

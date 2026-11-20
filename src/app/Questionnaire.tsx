@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DETAILS_POSITION } from "@/lib/config";
 import {
@@ -245,6 +246,9 @@ export function Questionnaire({ seed, event, wave, aid, pilot }: Props) {
         <button type="button" className="primary" onClick={next}>
           Let&apos;s go →
         </button>
+        <p className="intro-styles-link">
+          <Link href="/styles">Curious first? Meet the nine styles</Link>
+        </p>
       </section>
     );
   }

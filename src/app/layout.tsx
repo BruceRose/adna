@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
+import { SITE_URL } from "@/lib/site";
 import "@fontsource-variable/nunito";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Audience DNA",
-  description: "Discover your Audience DNA profile.",
+  description: "Discover your event style and what helps you get the most out of events.",
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };

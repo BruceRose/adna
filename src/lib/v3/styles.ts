@@ -47,7 +47,18 @@ export interface Style {
   name: string;
   tagline: string;
   strengths: [string, string, string];
+  /** Second person, for the respondent's results page. */
   description: string;
+  /** Third person, for the public style page. */
+  about: string;
+  /** "At events they get the most from" (3 bullets). */
+  getMost: [string, string, string];
+  /** "What can drain them" (2 bullets). */
+  drains: [string, string];
+  /** For fellow attendees: how to connect with this style. */
+  connect: string;
+  /** For organisers: designing for this style. */
+  design: string;
 }
 
 export const STYLES: Record<StyleId, Style> = {
@@ -58,6 +69,12 @@ export const STYLES: Record<StyleId, Style> = {
     strengths: ["Energetic", "Practical", "Action-focused"],
     description:
       "You get energy from being in the mix, and you value content you can put to work straight away. You get the most from events that combine plenty of contact with practical, usable takeaways.",
+    about:
+      "Activators get their energy from being in the mix and want content they can put to work straight away. They are often the ones starting conversations and turning ideas into next steps.",
+    getMost: ["Busy networking with a clear purpose", "Practical sessions with takeaways they can use the next day", "Demos, case studies and hands-on workshops"],
+    drains: ["Long, theoretical sessions with no practical point", "Hours of listening with no chance to talk"],
+    connect: "Be direct and practical. Suggest a concrete next step, such as a follow-up call or an introduction.",
+    design: "Give them plenty of structured networking and applied content, and make the practical takeaways explicit.",
   },
   connector: {
     id: "connector",
@@ -66,6 +83,12 @@ export const STYLES: Record<StyleId, Style> = {
     strengths: ["Sociable", "Versatile", "Collaborative"],
     description:
       "You enjoy meeting people and you move comfortably between big ideas and practical detail. Events that make it easy to meet the right people, around content worth discussing, suit you best.",
+    about:
+      "Connectors enjoy meeting people and move comfortably between big ideas and practical detail. They often bring people together around content worth discussing.",
+    getMost: ["Hosted introductions and networking around a theme", "Sessions that mix vision with real examples", "Discussion formats where people share views"],
+    drains: ["Events with little time to meet people", "Content that is all vision or all detail"],
+    connect: "Introduce them to someone they should meet, or ask what they've found most useful so far.",
+    design: "Build networking around the content, for example topic tables straight after a keynote.",
   },
   innovator: {
     id: "innovator",
@@ -74,6 +97,12 @@ export const STYLES: Record<StyleId, Style> = {
     strengths: ["Curious", "Energising", "Imaginative"],
     description:
       "You're energised by people and by new possibilities. Co-creation, big-idea sessions and conversations about what's next are where you do your best thinking.",
+    about:
+      "Innovators are energised by people and by new possibilities. They often do their best thinking out loud, with others, about what's next.",
+    getMost: ["Co-creation and ideas sessions", "Future-focused keynotes and bold questions", "Unusual formats and venues"],
+    drains: ["Rigidly familiar formats", "Content focused only on how things are done today"],
+    connect: "Ask a big question about where things are heading, and build on their ideas.",
+    design: "Include experimental formats and live participation, and leave room for discussion after big-idea sessions.",
   },
   pragmatist: {
     id: "pragmatist",
@@ -82,6 +111,12 @@ export const STYLES: Record<StyleId, Style> = {
     strengths: ["Grounded", "Adaptable", "Focused"],
     description:
       "You're comfortable in most social settings, and you look for content that is proven and usable. Clear, practical sessions and a mix of ways to meet people suit you.",
+    about:
+      "Pragmatists are comfortable in most social settings and look for content that is proven and usable. They judge an event by what they can take away from it.",
+    getMost: ["Clear, practical sessions with real examples", "A mix of ways to meet people", "Well-run agendas that respect their time"],
+    drains: ["Speculation without application", "Sessions that don't deliver what was promised"],
+    connect: "Talk about what's working in practice, and share something useful.",
+    design: "Make session descriptions accurate, and lead with outcomes and evidence.",
   },
   all_rounder: {
     id: "all_rounder",
@@ -90,6 +125,12 @@ export const STYLES: Record<StyleId, Style> = {
     strengths: ["Flexible", "Balanced", "Open"],
     description:
       "You move easily between networking and quieter time, and between big ideas and practical detail. Variety suits you, and you can get value from almost any format.",
+    about:
+      "All-Rounders move easily between networking and quieter time, and between big ideas and practical detail. They can get value from almost any format.",
+    getMost: ["Variety across the day", "A choice of formats and ways to take part", "Content that links the big picture to practice"],
+    drains: ["Days built around a single format", "Too little choice in how to take part"],
+    connect: "Most approaches work. Ask what they're hoping to get from the event.",
+    design: "Offer variety and choice. All-Rounders tend to adapt to what the room needs.",
   },
   explorer: {
     id: "explorer",
@@ -98,6 +139,12 @@ export const STYLES: Record<StyleId, Style> = {
     strengths: ["Inquisitive", "Open-minded", "Adaptable"],
     description:
       "You're curious about what's next, and you join in when the topic is worth it. Sessions that stretch your thinking, and formats you haven't tried before, suit you.",
+    about:
+      "Explorers are curious about what's next and join in when the topic is worth it. They are drawn to sessions that stretch their thinking.",
+    getMost: ["Future-focused and in-depth sessions", "Formats they haven't tried before", "Conversations about emerging ideas"],
+    drains: ["Repetitive or predictable content", "Networking without a topic to talk about"],
+    connect: "Share an idea or trend you've found interesting and ask what they think.",
+    design: "Signpost what's new and unexpected in the programme, and leave space for questions.",
   },
   analyst: {
     id: "analyst",
@@ -106,6 +153,12 @@ export const STYLES: Record<StyleId, Style> = {
     strengths: ["Focused", "Thorough", "Practical"],
     description:
       "You prefer purposeful conversations to working the room, and you value content that is practical and well evidenced. Pre-arranged meetings and focused, applied sessions suit you best.",
+    about:
+      "Analysts prefer purposeful conversations to working the room, and they value content that is practical and well evidenced.",
+    getMost: ["Pre-arranged one-to-one meetings", "Focused, applied sessions with data and case studies", "Clear agendas and session detail in advance"],
+    drains: ["Large, unstructured networking", "Claims without evidence"],
+    connect: "Arrange a meeting in advance with a clear purpose, and bring evidence.",
+    design: "Offer pre-booked meetings and roundtables, and publish detailed session content early.",
   },
   observer: {
     id: "observer",
@@ -114,6 +167,12 @@ export const STYLES: Record<StyleId, Style> = {
     strengths: ["Thoughtful", "Attentive", "Considered"],
     description:
       "You like time to absorb what you hear before joining in, and you connect best in smaller settings. A balance of content, with space to reflect and talk one to one, suits you.",
+    about:
+      "Observers like time to absorb what they hear before joining in, and they connect best in smaller settings.",
+    getMost: ["Small-group discussion and one-to-one conversations", "A balance of big-picture and practical content", "Space to reflect between sessions"],
+    drains: ["Being put on the spot in front of a large audience", "Back-to-back sessions with no time to think"],
+    connect: "Start a one-to-one conversation in a quieter moment, and give them time to respond.",
+    design: "Offer anonymous Q&A and quiet spaces, and build in breaks for reflection.",
   },
   scholar: {
     id: "scholar",
@@ -122,6 +181,12 @@ export const STYLES: Record<StyleId, Style> = {
     strengths: ["Deep-thinking", "Insightful", "Independent"],
     description:
       "You enjoy thinking hard about complex questions, and you prefer depth to breadth in conversation too. In-depth sessions, small-group discussion and pre-reading suit you best.",
+    about:
+      "Scholars enjoy thinking hard about complex questions and prefer depth to breadth, in content and in conversation.",
+    getMost: ["In-depth sessions and pre-reading", "Small-group discussion with expert voices", "Time to explore an idea properly"],
+    drains: ["Surface-level content", "Large, noisy networking"],
+    connect: "Ask a thoughtful question about a session, and be ready for a deep conversation.",
+    design: "Provide deep-dive tracks, reading lists and small, expert-led discussions.",
   },
 };
 
@@ -213,3 +278,45 @@ export function motivationLabel(ids: MotivationId[]): string | null {
 /** Results page note (spec 7.7). */
 export const ABOUT_YOUR_STYLE =
   "Your style summarises how you described yourself today. Most people sit near the middle on at least one axis, and your style can shift with context. Use it as a starting point for conversation, not a fixed label.";
+
+/* ---------- Style pages: URLs, order and neighbours ---------- */
+
+/** URL slug for a style: kebab-case, e.g. all_rounder → all-rounder. */
+export const styleSlug = (id: StyleId) => id.replace(/_/g, "-");
+
+/** StyleId from a URL slug, or null if it isn't one. */
+export function styleFromSlug(slug: string): StyleId | null {
+  const id = slug.replace(/-/g, "_");
+  return (STYLE_IDS as string[]).includes(id) && styleSlug(id as StyleId) === slug ? (id as StyleId) : null;
+}
+
+export const isStyleId = (x: string | null | undefined): x is StyleId => !!x && (STYLE_IDS as string[]).includes(x);
+
+/** Grid order, row by row: Sociable row first, Applied column first. */
+export const GRID_ORDER: StyleId[] = CONNECTING_ROWS.flatMap((c) => IDEAS_COLUMNS.map((i) => GRID[c][i]));
+
+/** Previous and next styles in grid order (wrapping round). */
+export function prevNextStyle(id: StyleId): { prev: StyleId; next: StyleId } {
+  const i = GRID_ORDER.indexOf(id);
+  return { prev: GRID_ORDER[(i + 8) % 9], next: GRID_ORDER[(i + 1) % 9] };
+}
+
+/** Styles in cells sharing an edge with this one (2-4 of them). */
+export function neighbouringStyles(id: StyleId): StyleId[] {
+  const rows = CONNECTING_ROWS;
+  const cols = IDEAS_COLUMNS;
+  const { connecting, ideas } = positionOf(id);
+  const r = rows.indexOf(connecting);
+  const c = cols.indexOf(ideas);
+  return [
+    [r - 1, c],
+    [r, c - 1],
+    [r, c + 1],
+    [r + 1, c],
+  ]
+    .filter(([y, x]) => y >= 0 && y < 3 && x >= 0 && x < 3)
+    .map(([y, x]) => GRID[rows[y]][cols[x]]);
+}
+
+/** Plural for page copy, e.g. "Analysts", "All-Rounders". */
+export const stylePlural = (id: StyleId) => `${STYLES[id].name}s`;

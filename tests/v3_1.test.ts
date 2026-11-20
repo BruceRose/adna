@@ -100,3 +100,98 @@ test("purge anonymises only expired rows, keeps industry and answers, and is ide
     assert.equal(r.anonymisedAt, null);
   }
 });
+
+/* ---------- Style pages ---------- */
+
+import { compareStyles } from "../src/lib/v3/compare";
+import { emblemGeometry } from "../src/lib/v3/emblem";
+import {
+  GRID_ORDER,
+  STYLES,
+  STYLE_IDS,
+  neighbouringStyles,
+  positionOf,
+  prevNextStyle,
+  styleFromSlug,
+  styleSlug,
+} from "../src/lib/v3/styles";
+
+test("every style has complete style-page content", () => {
+  for (const id of STYLE_IDS) {
+    const s = STYLES[id];
+    assert.ok(s.about.trim().length > 0, `${id} about`);
+    assert.equal(s.getMost.length, 3, `${id} getMost`);
+    assert.equal(s.drains.length, 2, `${id} drains`);
+    assert.ok(s.getMost.every((x) => x.trim()) && s.drains.every((x) => x.trim()));
+    assert.ok(s.connect.trim() && s.design.trim(), `${id} connect/design`);
+    for (const text of [s.about, ...s.getMost, ...s.drains, s.connect, s.design]) assert.ok(!text.includes("—"), `${id} em dash`);
+  }
+});
+
+test("compareStyles covers all 72 ordered pairs and never claims compatibility", () => {
+  let pairs = 0;
+  for (const you of STYLE_IDS) {
+    for (const them of STYLE_IDS) {
+      if (you === them) continue;
+      pairs++;
+      const c = compareStyles(you, them);
+      assert.equal(c.lines.length, 2);
+      assert.equal(c.tip, `Tip: ${STYLES[them].connect}`);
+      const all = [...c.lines, c.tip].join(" ").toLowerCase();
+      for (const banned of ["click", "compatib", "chemistry"]) assert.ok(!all.includes(banned), `${you}->${them}: ${banned}`);
+    }
+  }
+  assert.equal(pairs, 72);
+  assert.deepEqual(compareStyles("analyst", "innovator").lines, [
+    "Innovators are more Sociable than you on Connecting: they're likely to enjoy busier networking.",
+    "Innovators are more Exploratory than you on Ideas: they're drawn to future-focused and experimental content.",
+  ]);
+  assert.deepEqual(compareStyles("explorer", "pragmatist").lines, [
+    "You're both Adaptable on Connecting.",
+    "Pragmatists are more Applied than you on Ideas: they prefer practical, proven content.",
+  ]);
+});
+
+test("neighbouring styles share an edge on the grid (2-4 of them, symmetric)", () => {
+  for (const id of STYLE_IDS) {
+    const n = neighbouringStyles(id);
+    assert.ok(n.length >= 2 && n.length <= 4, id);
+    const a = positionOf(id);
+    for (const other of n) {
+      const b = positionOf(other);
+      const diffs = (["connecting", "ideas"] as const).filter((k) => a[k] !== b[k]).length;
+      assert.equal(diffs, 1, `${id} vs ${other}`);
+      assert.ok(neighbouringStyles(other).includes(id), "symmetric");
+    }
+  }
+  assert.deepEqual(neighbouringStyles("all_rounder").sort(), ["connector", "explorer", "observer", "pragmatist"]);
+  assert.equal(neighbouringStyles("activator").length, 2);
+});
+
+test("style ids map to kebab-case slugs and back; grid order and prev/next", () => {
+  assert.equal(styleSlug("all_rounder"), "all-rounder");
+  assert.equal(styleFromSlug("all-rounder"), "all_rounder");
+  assert.equal(styleFromSlug("all_rounder"), null, "snake case is not a valid URL");
+  assert.equal(styleFromSlug("wizard"), null);
+  for (const id of STYLE_IDS) assert.equal(styleFromSlug(styleSlug(id)), id);
+  assert.deepEqual(GRID_ORDER, ["activator", "connector", "innovator", "pragmatist", "all_rounder", "explorer", "analyst", "observer", "scholar"]);
+  assert.deepEqual(prevNextStyle("activator"), { prev: "scholar", next: "connector" });
+});
+
+test("emblems: node count follows Connecting, shape follows Ideas", () => {
+  assert.equal(emblemGeometry("analyst").nodes.length, 2);
+  assert.equal(emblemGeometry("pragmatist").nodes.length, 4);
+  assert.equal(emblemGeometry("activator").nodes.length, 5);
+  assert.match(emblemGeometry("analyst").nodes[0], /Q/); // rounded square
+  assert.match(emblemGeometry("observer").nodes[0], /A/); // circle
+  assert.doesNotMatch(emblemGeometry("scholar").nodes[0], /[AQ]/); // burst
+  assert.deepEqual(emblemGeometry("explorer"), emblemGeometry("explorer"), "deterministic");
+});
+
+test("emblems: every node of every style is a full shape", () => {
+  for (const id of STYLE_IDS) {
+    for (const d of emblemGeometry(id).nodes) assert.ok(d.length > 40 && d.startsWith("M") && d.endsWith("Z"), `${id}: ${d.slice(0, 20)}`);
+  }
+  // Bursts are 8-pointed: 16 vertices.
+  assert.equal((emblemGeometry("scholar").nodes[0].match(/[ML]/g) ?? []).length, 16);
+});

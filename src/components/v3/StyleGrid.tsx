@@ -96,3 +96,21 @@ export function StyleGrid(
     </div>
   );
 }
+
+/** A small 3 x 3 position marker (no labels), e.g. in style page heroes. */
+export function MiniGrid({ style, size = 84 }: { style: StyleId; size?: number }) {
+  const cell = (size - 8) / 3;
+  return (
+    <div className="mini-grid-cells" style={{ width: size, height: size }} aria-hidden>
+      {CONNECTING_ROWS.map((c) =>
+        IDEAS_COLUMNS.map((i) => (
+          <span
+            key={`${c}-${i}`}
+            className={GRID[c][i] === style ? "on" : ""}
+            style={{ width: cell, height: cell, ["--c" as string]: `var(--style-${style})` }}
+          />
+        )),
+      )}
+    </div>
+  );
+}
