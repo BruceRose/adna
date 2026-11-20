@@ -36,7 +36,7 @@ export function IntroScreen({ onStart }: { onStart: () => void }) {
           <span>Tips for your events</span>
         </li>
       </ul>
-      <p className="intro-meta">About 6 minutes · 3 short parts</p>
+      <p className="intro-meta">Easy questions · 3 short parts</p>
       <p className="muted intro-consent">{INTRO_CONSENT_LINE}</p>
       <button type="button" className="primary" onClick={onStart}>
         Let&apos;s go →
