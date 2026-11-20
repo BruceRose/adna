@@ -74,6 +74,12 @@ export default async function AdminResponses({
         </form>
       )}
 
+      {filters.batch && (
+        <p className="notice subtle filter-chip">
+          Showing one import batch. <Link href={`/admin${qs({ batch: undefined, page: undefined })}`}>Show all responses</Link>
+        </p>
+      )}
+
       <form className="filters" method="get">
         <input name="q" placeholder="Search name or email" defaultValue={filters.q} aria-label="Search" />
         <select name="event" defaultValue={filters.event ?? ""} aria-label="Event">
@@ -111,6 +117,7 @@ export default async function AdminResponses({
           <option value="clean">Clean</option>
           <option value="flagged">Flagged</option>
         </select>
+        {filters.batch && <input type="hidden" name="batch" value={filters.batch} />}
         <button className="primary small">Filter</button>
         {filtered && (
           <Link href="/admin" className="small">
@@ -162,6 +169,7 @@ export default async function AdminResponses({
                   <th>Event</th>
                   <th>Wave</th>
                   <th>Version</th>
+                  <th>Source</th>
                   <th>Style</th>
                   <th>Quality</th>
                 </tr>
@@ -181,6 +189,7 @@ export default async function AdminResponses({
                     <td>{r.event ?? <span className="muted">-</span>}</td>
                     <td>{r.wave ?? <span className="muted">-</span>}</td>
                     <td>{r.questionnaireVersion}</td>
+                    <td>{r.source === "import" ? "Import" : "Web"}</td>
                     <td className="nowrap">{STYLES[r.style].name}</td>
                     <td>
                       {r.qualityFlags.length ? (

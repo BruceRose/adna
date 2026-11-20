@@ -242,3 +242,206 @@ test("draft: never restores name or email, rejects junk", () => {
   assert.equal(d.stepIndex, 7);
   assert.equal((d as unknown as Record<string, unknown>).details, undefined);
 });
+
+/* ---------- CSV import ---------- */
+
+import { readFileSync } from "node:fs";
+import Papa from "papaparse";
+import { IMPORT_COLUMNS, analyseImport, templateCsv } from "../src/lib/v3/importCsv";
+
+const NOW = Date.parse("2026-11-20T12:00:00Z");
+const EXAMPLE = readFileSync(new URL("../docs/import/audiencedna-import-example.csv", import.meta.url), "utf8");
+const TEMPLATE = readFileSync(new URL("../docs/import/audiencedna-import-template.csv", import.meta.url), "utf8");
+const exampleRows = () => Papa.parse<Record<string, string>>(EXAMPLE.replace(/^﻿/, ""), { header: true, skipEmptyLines: true }).data;
+const toCsv = (rows: Record<string, string>[], columns = IMPORT_COLUMNS, delimiter = ",") =>
+  "﻿" + Papa.unparse({ fields: columns, data: rows.map((r) => columns.map((c) => r[c] ?? "")) }, { newline: "\r\n", delimiter }) + "\r\n";
+
+test("import: generated header matches both committed files byte for byte (ignoring the BOM)", () => {
+  const header = (s: string) => s.replace(/^﻿/, "").split("\r\n")[0];
+  assert.equal(header(templateCsv()), IMPORT_COLUMNS.join(","));
+  assert.equal(header(TEMPLATE), header(templateCsv()));
+  assert.equal(header(EXAMPLE), header(templateCsv()));
+  assert.ok(TEMPLATE.startsWith("﻿") && EXAMPLE.startsWith("﻿"), "UTF-8 BOM");
+  assert.ok(EXAMPLE.includes("\r\n") && !/[^\r]\n/.test(EXAMPLE), "CRLF line endings");
+});
+
+test("import: the example file gives the spec's expected results (5.5)", () => {
+  const a = analyseImport(EXAMPLE, { now: NOW });
+  assert.deepEqual(a.fileErrors, []);
+  assert.deepEqual(a.errors, []);
+  const got = a.valid.map((r) => ({
+    row: r.row,
+    name: r.name,
+    style: r.score.style,
+    c: r.score.axes.connecting.score,
+    i: r.score.axes.ideas.score,
+    nb: r.score.styleNeighbour,
+    planning: r.score.badges.planning,
+    ns: r.score.scaleScores.NS,
+    motivation: r.score.badges.motivation,
+    flags: r.score.qualityFlags,
+  }));
+  assert.deepEqual(got, [
+    { row: 2, name: "Priya Example", style: "scholar", c: 2, i: 4.5, nb: null, planning: "planner", ns: 4.33, motivation: ["learn", "business"], flags: [] },
+    { row: 3, name: "Tom Sample", style: "connector", c: 4.63, i: 3.25, nb: null, planning: "free_roamer", ns: 2.17, motivation: ["connect"], flags: [] },
+    { row: 4, name: "Sam Placeholder", style: "explorer", c: 3.13, i: 4.13, nb: null, planning: "free_roamer", ns: 2, motivation: ["inspiration", "learn"], flags: [] },
+  ]);
+});
+
+test("import: each deliberate error yields exactly the matching row error (5.6)", () => {
+  const base = exampleRows()[0];
+  const rows = [
+    { ...base, email: "e1@example.com", SE1: "6" },
+    { ...base, email: "e2@example.com", P4: "data" },
+    { ...base, email: "e3@example.com", P2_roundtables: "" },
+    { ...base, email: "e4@example.com", industry: "Other", industry_other: "" },
+    { ...base, email: "e5@example.com", consent_at: "" },
+    { ...base, email: "e6@example.com", submitted_at: "2027-01-01T09:00:00Z" },
+  ];
+  const a = analyseImport(toCsv(rows), { now: NOW });
+  assert.equal(a.valid.length, 0);
+  assert.deepEqual(
+    a.errors.map((e) => [e.row, e.column]),
+    [[2, "SE1"], [3, "P4"], [4, "P2_roundtables"], [5, "industry_other"], [6, "consent_at"], [7, "submitted_at"]],
+  );
+  // The error report has the original rows plus an "errors" column.
+  assert.equal(a.errorRows.length, 6);
+  assert.match(a.errorRows[0].errors, /^SE1: /);
+});
+
+test("import: a missing required column is a file-level error naming it", () => {
+  const cols = IMPORT_COLUMNS.filter((c) => c !== "NS6");
+  const a = analyseImport(toCsv(exampleRows(), cols), { now: NOW });
+  assert.equal(a.fileErrors.length, 1);
+  assert.match(a.fileErrors[0], /Missing required columns: NS6$/);
+  assert.equal(a.valid.length, 0);
+});
+
+test("import: codes and labels are both accepted, case- and apostrophe-insensitive, with | for multiple values", () => {
+  const base = exampleRows()[0];
+  const labels = {
+    ...base,
+    email: "labels@example.com",
+    industry: "  financial   SERVICES ",
+    role: "team or project manager",
+    events_attended: "6 or more",
+    SE1: "Very like me",
+    SE2: "somewhat unlike me",
+    P1: "Learning new ideas or insights | meet_new",
+    P2_reception: "It’s OK",
+    P2_hosted_intros: "works well for me",
+    P2_one_to_one: "Not for me",
+    P3: "Answering live polls|I prefer to listen",
+    P4: "Data and research|demo",
+    P5: "Over an hour, if the content is in-depth",
+    P6: "Leaning warm",
+    P7: "The essentials plus the agenda",
+    P8: "No preference",
+  };
+  const a = analyseImport(toCsv([labels]), { now: NOW });
+  assert.deepEqual(a.errors, []);
+  const r = a.valid[0];
+  assert.equal(r.context.industry, "Financial Services");
+  assert.equal(r.context.role, "manager");
+  assert.equal(r.context.eventsAttended, "6_plus");
+  assert.equal(r.answers.SE1, 5);
+  assert.equal(r.answers.SE2, 2);
+  assert.deepEqual(r.preferences.P1, ["learn_ideas", "meet_new"]);
+  assert.equal(r.preferences.P2.reception, 1);
+  assert.deepEqual(r.preferences.P3, ["polls", "listen"]);
+  assert.deepEqual(r.preferences.P4, ["data", "demo"]);
+  assert.equal(r.preferences.P5, "gt60");
+  assert.equal(r.preferences.P6, 4);
+  assert.equal(r.preferences.P8, "none");
+  // Unknown labels are errors on that column.
+  const bad = analyseImport(toCsv([{ ...base, email: "bad@example.com", role: "astronaut", P1: "learn_ideas|meet_new|change" }]), { now: NOW });
+  assert.deepEqual(bad.errors.map((e) => e.column).sort(), ["P1", "role"]);
+});
+
+test("import: semicolon-delimited files, unknown columns and defaults", () => {
+  const rows = exampleRows().map((r) => ({ ...r, consent_source: "", event: "" }));
+  const cols = [...IMPORT_COLUMNS, "notes"];
+  const a = analyseImport(toCsv(rows, cols, ";"), { now: NOW, defaultConsentSource: "Typeform", defaultEvent: "Spring Forum" });
+  assert.deepEqual(a.errors, []);
+  assert.equal(a.valid.length, 3);
+  assert.deepEqual(a.warnings, ['Unknown column "notes" was ignored.']);
+  assert.equal(a.valid[0].consentSource, "Typeform");
+  assert.equal(a.valid[0].event, "spring-forum");
+  // With no consent source and no default, the row is rejected.
+  const none = analyseImport(toCsv(rows.slice(0, 1)), { now: NOW });
+  assert.deepEqual(none.errors.map((e) => e.column), ["consent_source"]);
+});
+
+test("import: pilot markers are all-or-none", () => {
+  const base = exampleRows()[0];
+  const some = analyseImport(toCsv([{ ...base, M_E1: "3" }]), { now: NOW });
+  assert.equal(some.valid.length, 0);
+  assert.match(some.errors[0].message, /all 12/);
+  const all = analyseImport(toCsv([{ ...base, ...Object.fromEntries(IMPORT_COLUMNS.filter((c) => c.startsWith("M_")).map((c) => [c, "4"])) }]), { now: NOW });
+  assert.equal(all.valid[0].pilotAnswers?.M_C4, 4);
+});
+
+test("import: duplicates within a file are skipped unless 'Import anyway'", () => {
+  const [row] = exampleRows();
+  const twice = toCsv([row, { ...row, name: "Priya Again", email: "PRIYA@example.com" }]);
+  const skip = analyseImport(twice, { now: NOW });
+  assert.equal(skip.valid.length, 1);
+  assert.deepEqual(skip.duplicates.map((d) => d.row), [3]);
+  assert.equal(analyseImport(twice, { now: NOW, duplicates: "import" }).valid.length, 2);
+  // Same email at a different event is not a duplicate.
+  assert.equal(analyseImport(toCsv([row, { ...row, event: "Other Event" }]), { now: NOW }).valid.length, 2);
+});
+
+test("import: example imports, re-import skips 3 duplicates, undo removes exactly the batch", async () => {
+  const { existingDuplicateKeys, insertImportBatch, undoImportBatch } = await import("../src/lib/imports");
+  const { allResponses, getResponse } = await import("../src/lib/responses");
+  const before = (await allResponses({})).length;
+
+  const first = analyseImport(EXAMPLE, { now: NOW }, await existingDuplicateKeys());
+  const res = await insertImportBatch(first, { fileName: "example.csv" }, NOW);
+  assert.equal(res.imported, 3);
+  const batchRows = await allResponses({ batch: res.batchId });
+  assert.equal(batchRows.length, 3);
+  const priya = batchRows.find((r) => r.name === "Priya Example")!;
+  assert.equal(priya.style, "scholar");
+  assert.equal(priya.source, "import");
+  assert.equal(priya.consentVersion, "import");
+  assert.equal(priya.consentSource, "Paper form, Leadership Summit 2026");
+  assert.equal(priya.createdAt.toISOString(), "2026-11-12T10:15:00.000Z");
+  assert.equal(priya.meta.userAgentClass, "unknown");
+  assert.deepEqual(priya.meta.presentedOrder, []);
+  const sam = batchRows.find((r) => r.name === "Sam Placeholder")!;
+  assert.equal(sam.createdAt.toISOString(), new Date(NOW).toISOString(), "no submitted_at: import time");
+  assert.equal(sam.industryOther, "Sports and live events");
+
+  const again = analyseImport(EXAMPLE, { now: NOW }, await existingDuplicateKeys());
+  assert.equal(again.valid.length, 0);
+  assert.equal(again.duplicates.length, 3);
+
+  const deleted = await undoImportBatch(res.batchId);
+  assert.equal(deleted, 3);
+  assert.equal((await allResponses({})).length, before, "only the batch's rows were removed");
+  assert.equal(await getResponse(priya.id), null);
+});
+
+test("import: 5,000 rows validate in under 5s and import in under 15s", async () => {
+  const { insertImportBatch, undoImportBatch } = await import("../src/lib/imports");
+  const [row] = exampleRows();
+  const rows = Array.from({ length: 5000 }, (_, i) => ({ ...row, email: `bulk${i}@example.com` }));
+  const csv = toCsv(rows);
+  let t = performance.now();
+  const a = analyseImport(csv, { now: NOW });
+  const validateMs = performance.now() - t;
+  assert.equal(a.valid.length, 5000);
+  assert.ok(validateMs < 5000, `validate took ${validateMs.toFixed(0)}ms`);
+  t = performance.now();
+  const res = await insertImportBatch(a, { fileName: "bulk.csv" }, NOW);
+  const importMs = performance.now() - t;
+  assert.equal(res.imported, 5000);
+  assert.ok(importMs < 15000, `import took ${importMs.toFixed(0)}ms`);
+  console.log(`# 5,000 rows: validate ${validateMs.toFixed(0)}ms, import ${importMs.toFixed(0)}ms`);
+  await undoImportBatch(res.batchId);
+  // Over the limit is a file-level error.
+  const tooMany = analyseImport(toCsv(Array.from({ length: 5001 }, (_, i) => ({ ...row, email: `x${i}@example.com` }))), { now: NOW });
+  assert.match(tooMany.fileErrors[0], /Too many rows/);
+});

@@ -169,3 +169,23 @@ export const submissionSchema = z.object({
 export type Submission = z.input<typeof submissionSchema>;
 export type FieldErrorKey = "name" | "email" | "consent" | "industry" | "industryOther" | "role" | "eventsAttended";
 export type FieldErrors = Partial<Record<FieldErrorKey, string>>;
+
+/* ---------- CSV import ---------- */
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+
+/** ISO date (2026-11-12) or date-time (2026-11-12T10:15:00Z), not in the future. */
+export const isoDateNotFuture = (now: number) =>
+  z
+    .string()
+    .trim()
+    .refine((v) => ISO_DATE.test(v) && Number.isFinite(Date.parse(v)), "Use an ISO date, e.g. 2026-11-12 or 2026-11-12T10:15:00Z")
+    .transform((v) => new Date(v))
+    .refine((d) => d.getTime() <= now, "Can't be in the future");
+
+/** Evidence of consent for imported rows. */
+export const importConsentSchema = (now: number) =>
+  z.object({
+    consent_at: isoDateNotFuture(now),
+    consent_source: z.string().trim().min(1, "Say where consent was given").max(200),
+  });

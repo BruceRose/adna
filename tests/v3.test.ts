@@ -433,6 +433,7 @@ function responseRow(): ResponseRow {
 test("export headers match spec section 10 exactly", () => {
   const expected = [
     "#", "Response ID", "Submitted", "Name", "Email", "Industry", "Event", "Wave", "Attendee ref", "Version", "Norms version",
+    "Source", "Import batch", "Consent source", "Consent version",
     "C2", "C3",
     "SE1", "SE2", "SE3", "SE4", "SI1", "SI2", "SI3", "SI4", "DP1", "DP2", "DP3", "DP4",
     "NO1", "NO2", "NO3", "NO4", "NS1", "NS2", "NS3", "NS4", "NS5", "NS6",

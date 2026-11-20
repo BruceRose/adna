@@ -22,8 +22,10 @@ export function v3Headers(opts: ExportOptions = {}): string[] {
   const identity = opts.research
     ? ["#", "Response ID (hashed)", "Submitted", "Industry", "Event", "Wave", "Attendee ref", "Version", "Norms version"]
     : ["#", "Response ID", "Submitted", "Name", "Email", "Industry", "Event", "Wave", "Attendee ref", "Version", "Norms version"];
+  const provenance = ["Source", "Import batch", "Consent source", "Consent version"];
   return [
     ...identity,
+    ...provenance,
     "C2",
     "C3",
     ...TRAIT_IDS,
@@ -76,6 +78,10 @@ export function v3Row(r: ResponseRow, index: number, opts: ExportOptions = {}): 
     r.attendeeRef ?? "",
     r.questionnaireVersion,
     r.normsVersion,
+    r.source,
+    r.importBatchId ?? "",
+    r.consentSource ?? "",
+    r.consentVersion ?? "",
     r.context.role,
     r.context.eventsAttended,
     ...TRAIT_IDS.map((id) => r.answers[id] ?? ""),

@@ -15,6 +15,8 @@ export interface ResponseFilters {
   wave?: string;
   /** "flagged" = has any quality flag, "clean" = none. */
   quality?: "flagged" | "clean";
+  /** Import batch id. */
+  batch?: string;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,6 +34,7 @@ function whereFor(f: ResponseFilters): SQL | undefined {
   if (f.wave) parts.push(eq(responses.wave, f.wave));
   if (f.quality === "flagged") parts.push(sql`jsonb_array_length(${responses.qualityFlags}) > 0`);
   if (f.quality === "clean") parts.push(sql`jsonb_array_length(${responses.qualityFlags}) = 0`);
+  if (f.batch && isUuid(f.batch)) parts.push(eq(responses.importBatchId, f.batch));
   return parts.length ? and(...parts) : undefined;
 }
 
@@ -142,6 +145,7 @@ export function filtersFromParams(p: Record<string, string | string[] | undefine
     style: one("style"),
     wave: one("wave"),
     quality: quality === "flagged" || quality === "clean" ? quality : undefined,
+    batch: one("batch"),
   };
 }
 
