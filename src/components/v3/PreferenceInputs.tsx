@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { P1, P2, P3, P4, P5, P6, P7, P8, type Option, type P2RowId, type Preferences } from "@/lib/v3/items";
 
 export type PrefKey = keyof Preferences;
@@ -64,10 +66,11 @@ export function PreferenceQuestion({
   onAnswered?: () => void;
   headingLevel?: 2 | 3;
 }) {
+  const [swapped, setSwapped] = useState(false);
   const id = `q-${qkey}`;
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const heading = (
-    <Heading className={headingLevel === 2 ? "statement" : "pref-heading"} id={id}>
+    <Heading className={headingLevel === 2 ? "statement" : "pref-heading"} id={id} tabIndex={-1} data-step-heading>
       {QUESTION_TEXT[qkey]}
     </Heading>
   );
@@ -79,31 +82,42 @@ export function PreferenceQuestion({
     case "P4": {
       const def = { P1, P3, P4 }[qkey];
       const chosen = draft[qkey];
-      const full = chosen.length >= def.max;
+      const limited = def.max < def.options.length;
+      const full = limited && chosen.length >= def.max;
+      const toggle = (optionId: string, on: boolean) => {
+        if (!on) {
+          setSwapped(false);
+          set({ [qkey]: chosen.filter((x) => x !== optionId) } as Partial<DraftPreferences>);
+        } else if (full) {
+          // At the limit: the new choice replaces the oldest one.
+          setSwapped(true);
+          set({ [qkey]: [...chosen.slice(1), optionId] } as Partial<DraftPreferences>);
+        } else {
+          setSwapped(false);
+          set({ [qkey]: [...chosen, optionId] } as Partial<DraftPreferences>);
+        }
+      };
       return (
         <div>
           {heading}
-          <div className="choices" role="group" aria-labelledby={id}>
+          <div className="choices chips-select" role="group" aria-labelledby={id}>
             {def.options.map((o) => {
               const checked = chosen.includes(o.id);
               return (
-                <label key={o.id} className={`choice${checked ? " checked" : ""}${!checked && full ? " disabled" : ""}`}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={!checked && full}
-                    onChange={(e) =>
-                      set({ [qkey]: e.target.checked ? [...chosen, o.id] : chosen.filter((x) => x !== o.id) } as Partial<DraftPreferences>)
-                    }
-                  />
+                <label key={o.id} className={`choice${checked ? " checked" : ""}${!checked && full ? " dim" : ""}`}>
+                  <input type="checkbox" checked={checked} onChange={(e) => toggle(o.id, e.target.checked)} />
                   <span>{o.label}</span>
+                  <svg className="choice-tick" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M3.5 8.5l3 3 6-7" />
+                  </svg>
                 </label>
               );
             })}
           </div>
-          {def.max < def.options.length && (
+          {limited && (
             <p className="choice-count muted small" aria-live="polite">
               {chosen.length} of {def.max} chosen
+              {swapped && <span className="swap-note"> · Swapped for your newest choice</span>}
             </p>
           )}
         </div>
@@ -118,7 +132,12 @@ export function PreferenceQuestion({
               const row = P2.rows.find((r) => r.id === rowId)!;
               const rowLabel = `${id}-${rowId}`;
               return (
-                <div key={rowId} className="matrix-row" role="radiogroup" aria-labelledby={rowLabel}>
+                <div
+                  key={rowId}
+                  className={`matrix-row${draft.P2[rowId] !== undefined ? " answered" : ""}`}
+                  role="radiogroup"
+                  aria-labelledby={rowLabel}
+                >
                   <span className="matrix-label" id={rowLabel}>
                     {row.label}
                   </span>

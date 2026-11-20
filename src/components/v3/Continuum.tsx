@@ -43,7 +43,10 @@ export function Continuum({
         {cuts.map((c) => (
           <div key={c} className="cont-cut" style={{ left: `${pos(c)}%` }} />
         ))}
-        <div className="cont-marker" style={{ left: `${pos(score)}%` }} />
+        {/* The layer spans the track, so translating it by a % of its width slides the marker from the centre. */}
+        <div className="cont-marker-layer" style={{ ["--shift" as string]: `${(50 - pos(score)).toFixed(2)}%` }}>
+          <div className="cont-marker" style={{ left: `${pos(score)}%` }} />
+        </div>
       </div>
       <div className="cont-zones" aria-hidden>
         {zones.map((z) => (

@@ -45,13 +45,14 @@ export function StyleGrid(
                 const style = STYLES[id];
                 if (audience) {
                   const cell = audience.cells[id];
-                  const intensity = cell.n === 0 ? 0 : 14 + Math.round((cell.n / max) * 76);
+                  // 0.2-1 of the theme's maximum shade, so text keeps AA contrast on every cell.
+                  const ratio = cell.n === 0 ? 0 : 0.2 + 0.8 * (cell.n / max);
                   return (
                     <div
                       key={id}
                       role="cell"
-                      className={`sgrid-cell heat${cell.n === 0 ? " empty" : ""}${intensity > 55 ? " dark" : ""}`}
-                      style={{ ["--i" as string]: `${intensity}%` }}
+                      className={`sgrid-cell heat${cell.n === 0 ? " empty" : ""}`}
+                      style={{ ["--r" as string]: ratio.toFixed(3) }}
                     >
                       <span className="sgrid-name">{style.name}</span>
                       <span className="sgrid-count">

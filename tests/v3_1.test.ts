@@ -195,3 +195,50 @@ test("emblems: every node of every style is a full shape", () => {
   // Bursts are 8-pointed: 16 vertices.
   assert.equal((emblemGeometry("scholar").nodes[0].match(/[ML]/g) ?? []).length, 16);
 });
+
+/* ---------- Questionnaire flow helpers ---------- */
+
+import { MILESTONES, buildSteps, milestoneFor, parseDraft, progressFor, secondsLeft, timeLeftLabel } from "../src/lib/v3/flow";
+
+test("time remaining: 8s per statement, 15s per Part 3 question, rounded, hidden under a minute", () => {
+  assert.equal(secondsLeft(22, 8), 22 * 8 + 8 * 15);
+  assert.equal(timeLeftLabel(secondsLeft(22, 8)), "About 5 minutes left"); // 296s
+  assert.equal(timeLeftLabel(secondsLeft(0, 4)), "About 1 minute left"); // 60s
+  assert.equal(timeLeftLabel(secondsLeft(0, 3)), null); // 45s
+  assert.equal(timeLeftLabel(89), "About 1 minute left");
+  assert.equal(timeLeftLabel(90), "About 2 minutes left");
+});
+
+test("flow: steps, progress labels and milestones", () => {
+  const steps = buildSteps([...FIXED_ORDER], false, "start");
+  assert.deepEqual(
+    steps.slice(0, 4).map((s) => s.kind),
+    ["intro", "details", "interstitial", "part1"],
+  );
+  assert.equal(steps.filter((s) => s.kind === "interstitial").length, 3);
+  const firstStatement = steps.findIndex((s) => s.kind === "trait");
+  assert.equal(progressFor(steps, firstStatement + 6).label, "Part 2 of 3 · Statement 7 of 22");
+  assert.equal(progressFor(steps, firstStatement + 6).announce, "Statement 7 of 22");
+  const firstPref = steps.findIndex((s) => s.kind === "pref");
+  assert.equal(progressFor(steps, firstPref + 2).label, "Part 3 of 3 · Question 3 of 8");
+  assert.deepEqual(progressFor(steps, firstPref).segments, [1, 1, 0]);
+  // Milestones
+  assert.equal(milestoneFor(steps, firstStatement + 11), MILESTONES.halfway);
+  assert.equal(milestoneFor(steps, firstStatement + 22), MILESTONES.statementsDone); // the Part 3 card
+  assert.equal(milestoneFor(steps, steps.findIndex((s) => s.kind === "freeText")), MILESTONES.freeText);
+  assert.equal(milestoneFor(steps, firstStatement + 5), null);
+  // Pilot items count as statements in Part 2.
+  const pilotSteps = buildSteps([...FIXED_ORDER], true, "start");
+  assert.equal(progressFor(pilotSteps, pilotSteps.findIndex((s) => s.kind === "pilot")).label, "Part 2 of 3 · Statement 23 of 34");
+});
+
+test("draft: never restores name or email, rejects junk", () => {
+  assert.equal(parseDraft(null), null);
+  assert.equal(parseDraft("{not json"), null);
+  assert.equal(parseDraft(JSON.stringify({ v: 2 })), null);
+  const d = parseDraft(
+    JSON.stringify({ v: 1, seed: 5, stepIndex: 7, answers: {}, pilotAnswers: {}, prefs: { P1: [], P2: {}, P3: [], P4: [] }, context: {}, timings: {}, detailsDone: true, details: { name: "X", email: "x@y.z" } }),
+  )!;
+  assert.equal(d.stepIndex, 7);
+  assert.equal((d as unknown as Record<string, unknown>).details, undefined);
+});

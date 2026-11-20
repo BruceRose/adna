@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ShareButton } from "@/components/ShareButton";
+import { ResultsActions, ScrollReveal, SectionNav } from "@/components/v3/ResultsChrome";
+import { CommunicationIcon, ContentIcon, MeetingIcon, PaceIcon, TakePartIcon } from "@/components/v3/TipIcons";
 import { Continuum } from "@/components/v3/Continuum";
 import { PreferencesPanel } from "@/components/v3/PreferencesPanel";
 import { StyleGrid } from "@/components/v3/StyleGrid";
@@ -42,9 +43,14 @@ export default async function ResultsPage({ params }: Props) {
   const shownP2 = row.meta.presentedOrder.filter((x) => x.startsWith("P2.")).map((x) => x.slice(3) as P2RowId);
   const p2Order = shownP2.length === P2_ROW_IDS.length ? shownP2 : P2_ROW_IDS;
 
+  const shareTitle = `My event style is ${style.name}. What's yours?`;
+
   return (
-    <div className="report">
-      <section className="card hero results-hero">
+    <div className="report results-page">
+      <ScrollReveal />
+      <SectionNav />
+
+      <section className="card hero results-hero" id="your-style">
         <StyleEmblem style={row.style} size={160} animate />
         <p className="eyebrow">Your event style</p>
         <h1 className="profile-name">
@@ -74,20 +80,15 @@ export default async function ResultsPage({ params }: Props) {
           </ul>
         )}
         {planning && <p className="muted badge-copy">{planning.copy}</p>}
-        <div className="hero-actions">
-          <ShareButton title={`My event style is ${style.name}. What's yours?`} />
-        </div>
+        <ResultsActions shareTitle={shareTitle} />
       </section>
 
-      <section className="card">
+      <section className="card reveal-on-scroll" id="your-map">
         <h2 className="section-title">Your style map</h2>
         <p className="muted">
           Nine event styles, based on how you like to connect with people and how you like to engage with ideas.
         </p>
         <StyleGrid mode="personal" style={row.style} neighbour={row.styleNeighbour} />
-      </section>
-
-      <section className="card">
         <h2 className="section-title">Where you sit</h2>
         <p className="muted">
           The marker shows where your answers place you. The shaded band shows the range you could fall in on another
@@ -99,11 +100,15 @@ export default async function ResultsPage({ params }: Props) {
         </div>
       </section>
 
-      <section className="card">
-        <h2 className="section-title">How you like to experience events</h2>
-        <div className="grid-2 recs-grid">
-          <div className="rec-block">
-            <h3>Formats that work for you</h3>
+      <section className="reveal-on-scroll" id="your-tips" aria-labelledby="tips-heading">
+        <h2 className="section-title tips-title" id="tips-heading">
+          How you like to experience events
+        </h2>
+        <div className="tips">
+          <article className="card tip">
+            <MeetingIcon />
+            <h3>Meeting people</h3>
+            <p className="muted small">Formats that work for you</p>
             {recs.formats.length ? (
               <ul className="chips formats">
                 {recs.formats.map((f) => (
@@ -111,43 +116,46 @@ export default async function ResultsPage({ params }: Props) {
                 ))}
               </ul>
             ) : (
-              <p className="muted">Ask organisers about smaller, more flexible ways to meet people.</p>
+              <p>Ask organisers about smaller, more flexible ways to meet people.</p>
             )}
-          </div>
-          <div className="rec-block">
-            <h3>How you like to take part</h3>
+          </article>
+          <article className="card tip">
+            <TakePartIcon />
+            <h3>Taking part</h3>
             {recs.takePart.map((t) => (
               <p key={t}>{t}</p>
             ))}
-          </div>
-          <div className="rec-block">
-            <h3>What convinces you</h3>
+          </article>
+          <article className="card tip">
+            <ContentIcon />
+            <h3>Content</h3>
+            <p className="muted small">What convinces you</p>
             <p>{recs.convinces}</p>
-          </div>
-          <div className="rec-block">
-            <h3>How to communicate with you</h3>
+            <p className="muted small">Content depth</p>
+            {recs.depth.map((t) => (
+              <p key={t}>{t}</p>
+            ))}
+          </article>
+          <article className="card tip">
+            <CommunicationIcon />
+            <h3>Communication</h3>
             <ul className="ticks">
               {recs.communicate.map((t) => (
                 <li key={t}>{t}</li>
               ))}
             </ul>
-          </div>
-          <div className="rec-block">
-            <h3>Content depth</h3>
-            {recs.depth.map((t) => (
-              <p key={t}>{t}</p>
-            ))}
-          </div>
+          </article>
           {recs.pace && (
-            <div className="rec-block">
+            <article className="card tip">
+              <PaceIcon />
               <h3>Pace</h3>
               <p>{recs.pace}</p>
-            </div>
+            </article>
           )}
         </div>
       </section>
 
-      <section className="card explore">
+      <section className="card explore reveal-on-scroll" id="explore">
         <h2 className="section-title">Explore the other styles</h2>
         <p className="muted">See what each style gets from events, and how it compares with yours.</p>
         <StyleExplorerGrid you={row.style} compact />
@@ -156,12 +164,12 @@ export default async function ResultsPage({ params }: Props) {
         </p>
       </section>
 
-      <section className="card">
+      <section className="card reveal-on-scroll" id="your-preferences">
         <h2 className="section-title">Your preferences</h2>
         <PreferencesPanel id={row.id} preferences={row.preferences} p2Order={p2Order} />
       </section>
 
-      <section className="card about-style">
+      <section className="card about-style reveal-on-scroll">
         <h2 className="section-title">About your style</h2>
         <p>{ABOUT_YOUR_STYLE}</p>
       </section>

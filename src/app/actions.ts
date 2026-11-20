@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { getResponse, insertResponse, isUuid, updateResponsePreferences } from "@/lib/responses";
 import { buildWebResponse } from "@/lib/v3/buildResponse";
 import type { Preferences } from "@/lib/v3/items";
+import type { StyleId } from "@/lib/v3/styles";
 import {
   preferencesSchema,
   submissionSchema,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/v3/validation";
 
 export type SubmitResult =
-  | { ok: true; id: string }
+  | { ok: true; id: string; style: StyleId }
   | { ok: false; fieldErrors?: FieldErrors; message: string };
 
 const FIELD_KEYS: FieldErrorKey[] = ["name", "email", "consent", "industry", "industryOther", "role", "eventsAttended"];
@@ -40,8 +41,9 @@ export async function submitResponse(input: Submission): Promise<SubmitResult> {
 
   const ua = (await headers()).get("user-agent") ?? "";
   try {
-    const id = await insertResponse(buildWebResponse(parsed.data, Date.now(), ua));
-    return { ok: true, id };
+    const row = buildWebResponse(parsed.data, Date.now(), ua);
+    const id = await insertResponse(row);
+    return { ok: true, id, style: row.style };
   } catch (err) {
     console.error("Failed to save response", err);
     return { ok: false, message: "Sorry, we couldn't save your answers. Please try again." };
